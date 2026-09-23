@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PIXELS_PER_BLOCK, minColors, paintingSrc, type Painting } from "@/data/paintings";
-import { analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
+import { analyzeImage, simplify, type PaletteColor, type SimplifyMethod } from "@/lib/simplify";
 import { usePreference } from "@/lib/preferences";
 import {
   currentFlight,
@@ -20,6 +20,8 @@ type Props = {
   painting: Painting;
   /** Target number of colors; null keeps every original color (realistic). */
   colors: number | null;
+  /** How to get down to that many colors. */
+  method: SimplifyMethod;
   /** Color (0xRRGGBB) to highlight; every other pixel is dimmed. */
   focusColor: number | null;
   onPalette?: (palette: PaletteColor[]) => void;
@@ -215,6 +217,7 @@ function pixelsByColor(image: ImageData) {
 export function PaintingCanvas({
   painting,
   colors,
+  method,
   focusColor,
   onPalette,
   onTotalColors,
@@ -258,8 +261,8 @@ export function PaintingCanvas({
     if (!analysis) return null;
     const total = analysis.colors.length;
     const target = colors === null ? total : Math.max(minColors(total), Math.min(total, colors));
-    return simplifyToColors(analysis, target);
-  }, [analysis, colors]);
+    return simplify(analysis, target, method);
+  }, [analysis, colors, method]);
 
   useEffect(() => {
     if (simplified) onPalette?.(simplified.palette);
@@ -765,7 +768,7 @@ export function PaintingCanvas({
       </div>
       <div className="flight-enter-bottom pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
         {controls && (
-          <div className="w-80 max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
+          <div className="max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
             {controls}
           </div>
         )}

@@ -1,12 +1,14 @@
 /**
- * Merges perceptually close colors in an image so it is easier to paint.
+ * Reduces the colors in an image so it is easier to paint, in one of a few
+ * ways (see SIMPLIFY_METHODS).
  *
- * Colors are compared in CIE Lab space. Colors are visited from most to least
- * frequent; each one either joins the closest existing group whose seed is
- * within a ΔE threshold or starts a new group. Each group is then rendered as
- * its pixel-weighted average color. The threshold is found by binary search,
- * then the closest remaining groups are merged until exactly the requested
- * number of colors is left.
+ * Colors are compared in CIE Lab space. "Similar colors" visits colors from
+ * most to least frequent; each one either joins the closest existing group
+ * whose seed is within a ΔE threshold or starts a new group. The threshold is
+ * found by binary search, then the closest remaining groups are merged until
+ * exactly the requested number of colors is left. "Balanced" refines that
+ * grouping with k-means, and "smooth regions" then absorbs stray pixels into
+ * their surroundings. Each group is rendered as its pixel-weighted average.
  */
 
 type Lab = [number, number, number];
@@ -303,23 +305,35 @@ function countColors(image: ImageData): PaletteColor[] {
     .map(([key, count]) => ({ key, count }));
 }
 
+/** The ways a painting can be simplified; see `simplify`. */
+export const SIMPLIFY_METHODS = [
+  {
+    id: "similar",
+    name: "Similar colors",
+    description: "Merges colors that look alike, most common first. Keeps rare accent colors.",
+  },
+  {
+    id: "balanced",
+    name: "Balanced",
+    description:
+      "Picks the colors that best represent the whole painting (k-means). Closest to the original, especially in gradients.",
+  },
+  {
+    id: "regions",
+    name: "Smooth regions",
+    description:
+      "Balanced, then stray pixels take their surroundings' color, leaving bigger areas that are easier to paint.",
+  },
+] as const;
+
+export type SimplifyMethod = (typeof SIMPLIFY_METHODS)[number]["id"];
+
 /**
- * Reduces the image to `targetCount` colors (or fewer, in the rare case that
- * two groups average to the same color). Returns the source unchanged if it
- * already has no more than `targetCount` colors.
+ * Groups the colors into `targetCount` groups the "similar colors" way:
+ * find the widest ΔE threshold that still leaves enough groups, then merge
+ * the closest ones down to the exact count.
  */
-export function simplifyToColors(analysis: Analysis, targetCount: number): SimplifyResult {
-  const { source, colors } = analysis;
-  const out = new ImageData(new Uint8ClampedArray(source.data), source.width, source.height);
-
-  if (targetCount >= colors.length) {
-    return {
-      image: out,
-      colorCount: colors.length,
-      palette: orderByProximity(colors.map(({ key, count }) => ({ key, count }))),
-    };
-  }
-
+function similarGroups(colors: ColorEntry[], targetCount: number) {
   // Binary search for the largest threshold that still yields >= targetCount groups.
   let lo = 0;
   let hi = 120;
@@ -334,12 +348,84 @@ export function simplifyToColors(analysis: Analysis, targetCount: number): Simpl
       hi = mid;
     }
   }
-
   const { assignment } = best;
   const groupCount =
     best.groupCount > targetCount
       ? mergeClosestGroups(colors, assignment, best.groupCount, targetCount)
       : best.groupCount;
+  return { assignment, groupCount };
+}
+
+/** Most refinement rounds k-means gets; it usually settles well before. */
+const KMEANS_ROUNDS = 10;
+/**
+ * Color-to-center comparisons k-means may spend in total. With hundreds of
+ * colors the starting grouping is already close and a round is costly, so
+ * fewer rounds keep the slider responsive at little cost to the result.
+ */
+const KMEANS_BUDGET = 4_000_000;
+
+/**
+ * Refines a grouping with k-means in Lab: each group's center moves to the
+ * pixel-weighted mean of its colors, then every color joins the nearest
+ * center, until nothing moves. Starting from the "similar colors" grouping
+ * keeps it deterministic and quick to converge.
+ */
+function balancedGroups(colors: ColorEntry[], targetCount: number) {
+  const { assignment, groupCount } = similarGroups(colors, targetCount);
+  const centers = new Float64Array(groupCount * 3);
+  const weights = new Float64Array(groupCount);
+  const rounds = Math.min(
+    KMEANS_ROUNDS,
+    Math.max(1, Math.floor(KMEANS_BUDGET / (colors.length * groupCount))),
+  );
+  for (let round = 0; round < rounds; round++) {
+    centers.fill(0);
+    weights.fill(0);
+    for (let i = 0; i < colors.length; i++) {
+      const g = assignment[i];
+      const { lab, count } = colors[i];
+      centers[g * 3] += lab[0] * count;
+      centers[g * 3 + 1] += lab[1] * count;
+      centers[g * 3 + 2] += lab[2] * count;
+      weights[g] += count;
+    }
+    for (let g = 0; g < groupCount; g++) {
+      if (weights[g] === 0) continue;
+      for (let c = 0; c < 3; c++) centers[g * 3 + c] /= weights[g];
+    }
+    let moved = false;
+    for (let i = 0; i < colors.length; i++) {
+      const [l, a, b] = colors[i].lab;
+      let nearest = assignment[i];
+      let best = Infinity;
+      for (let g = 0; g < groupCount; g++) {
+        if (weights[g] === 0) continue;
+        const dl = l - centers[g * 3];
+        const da = a - centers[g * 3 + 1];
+        const db = b - centers[g * 3 + 2];
+        const d = dl * dl + da * da + db * db;
+        if (d < best) {
+          best = d;
+          nearest = g;
+        }
+      }
+      if (nearest !== assignment[i]) {
+        assignment[i] = nearest;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  return { assignment, groupCount };
+}
+
+/**
+ * Recolors the image: every color becomes the pixel-weighted average of its
+ * group. Returns a new image.
+ */
+function paintGroups(analysis: Analysis, assignment: Int32Array, groupCount: number) {
+  const { source, colors } = analysis;
   const sums = new Float64Array(groupCount * 4);
   for (let i = 0; i < colors.length; i++) {
     const { key, count } = colors[i];
@@ -359,18 +445,100 @@ export function simplifyToColors(analysis: Analysis, targetCount: number): Simpl
     ]);
   }
 
-  const src = source.data;
+  const out = new ImageData(new Uint8ClampedArray(source.data), source.width, source.height);
   const dst = out.data;
-  for (let o = 0; o < src.length; o += 4) {
-    if (src[o + 3] === 0) continue;
-    const key = (src[o] << 16) | (src[o + 1] << 8) | src[o + 2];
-    const [r, g, b] = mapping.get(key)!;
+  for (let o = 0; o < dst.length; o += 4) {
+    if (dst[o + 3] === 0) continue;
+    const [r, g, b] = mapping.get((dst[o] << 16) | (dst[o + 1] << 8) | dst[o + 2])!;
     dst[o] = r;
     dst[o + 1] = g;
     dst[o + 2] = b;
   }
+  return out;
+}
 
-  // Groups can occasionally average to the same color, so count the output.
+/** Cleanup passes for "smooth regions"; a second catches specks left by the first. */
+const SMOOTH_PASSES = 2;
+/** A pixel is a stray when at most this many of its neighbors share its color… */
+const STRAY_MAX_SAME = 1;
+/** …and at least this many share another single color, which it then takes. */
+const STRAY_MIN_OTHER = 4;
+
+/**
+ * Absorbs stray pixels: one whose color hardly appears among its 8
+ * neighbors, while one other color clearly dominates them, takes that color.
+ * Edges and lines survive (their pixels have same-colored neighbors along
+ * them); lone specks and ragged fringes don't.
+ */
+function smoothStrays(image: ImageData) {
+  const { width: w, height: h } = image;
+  let src = image.data;
+  for (let pass = 0; pass < SMOOTH_PASSES; pass++) {
+    const dst = new Uint8ClampedArray(src);
+    let changed = false;
+    const counts = new Map<number, number>();
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        if (src[o + 3] === 0) continue;
+        const own = (src[o] << 16) | (src[o + 1] << 8) | src[o + 2];
+        counts.clear();
+        let same = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if ((dx === 0 && dy === 0) || x + dx < 0 || y + dy < 0 || x + dx >= w || y + dy >= h) continue;
+            const n = ((y + dy) * w + x + dx) * 4;
+            if (src[n + 3] === 0) continue;
+            const key = (src[n] << 16) | (src[n + 1] << 8) | src[n + 2];
+            if (key === own) same++;
+            else counts.set(key, (counts.get(key) ?? 0) + 1);
+          }
+        }
+        if (same > STRAY_MAX_SAME) continue;
+        let top = -1;
+        let topCount = 0;
+        for (const [key, count] of counts) {
+          if (count > topCount) [top, topCount] = [key, count];
+        }
+        if (topCount < STRAY_MIN_OTHER) continue;
+        dst[o] = top >> 16;
+        dst[o + 1] = (top >> 8) & 255;
+        dst[o + 2] = top & 255;
+        changed = true;
+      }
+    }
+    src = dst;
+    if (!changed) break;
+  }
+  return new ImageData(src, w, h);
+}
+
+/**
+ * Reduces the image to `targetCount` colors with `method` (see
+ * SIMPLIFY_METHODS). The result can have fewer colors: groups can average to
+ * the same color, and smoothing can absorb a color that only existed as
+ * specks. Returns the source unchanged if it already has no more than
+ * `targetCount` colors.
+ */
+export function simplify(
+  analysis: Analysis,
+  targetCount: number,
+  method: SimplifyMethod,
+): SimplifyResult {
+  const { source, colors } = analysis;
+  if (targetCount >= colors.length) {
+    return {
+      image: new ImageData(new Uint8ClampedArray(source.data), source.width, source.height),
+      colorCount: colors.length,
+      palette: orderByProximity(colors.map(({ key, count }) => ({ key, count }))),
+    };
+  }
+
+  const { assignment, groupCount } =
+    method === "similar" ? similarGroups(colors, targetCount) : balancedGroups(colors, targetCount);
+  let out = paintGroups(analysis, assignment, groupCount);
+  if (method === "regions") out = smoothStrays(out);
+
   const palette = orderByProximity(countColors(out));
   return { image: out, colorCount: palette.length, palette };
 }

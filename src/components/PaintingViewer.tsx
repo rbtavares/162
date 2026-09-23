@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 import { PIXELS_PER_BLOCK, type Painting } from "@/data/paintings";
-import type { PaletteColor } from "@/lib/simplify";
+import { SIMPLIFY_METHODS, type PaletteColor } from "@/lib/simplify";
+import { useChoice } from "@/lib/preferences";
 import { ColorPanel } from "@/components/ColorPanel";
 import { PaintingCanvas } from "@/components/PaintingCanvas";
 import { SimplifySlider } from "@/components/SimplifySlider";
@@ -15,6 +16,11 @@ type Props = {
 
 export function PaintingViewer({ painting, headerRight }: Props) {
   const [colors, setColors] = useState<number | null>(null);
+  const [method, setMethod] = useChoice(
+    "simplify-method",
+    SIMPLIFY_METHODS.map((m) => m.id),
+    "balanced",
+  );
   const [totalColors, setTotalColors] = useState<number | null>(null);
   const [palette, setPalette] = useState<PaletteColor[] | null>(null);
   const [focus, setFocus] = useState<number | null>(null);
@@ -44,6 +50,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
             <PaintingCanvas
               painting={painting}
               colors={colors}
+              method={method}
               focusColor={focusColor}
               onPalette={setPalette}
               onTotalColors={setTotalColors}
@@ -55,6 +62,8 @@ export function PaintingViewer({ painting, headerRight }: Props) {
                   onChange={setColors}
                   total={totalColors}
                   colorCount={palette?.length ?? null}
+                  method={method}
+                  onMethodChange={setMethod}
                 />
               }
             />
