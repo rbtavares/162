@@ -112,13 +112,6 @@
     "height": 3
   },
   {
-    "id": "earth",
-    "title": "Earth",
-    "author": "",
-    "width": 2,
-    "height": 2
-  },
-  {
     "id": "endboss",
     "title": "Endboss",
     "author": "Kristoffer Zetterstrand",
@@ -144,13 +137,6 @@
     "title": "Finding",
     "author": "Kristoffer Zetterstrand",
     "width": 4,
-    "height": 2
-  },
-  {
-    "id": "fire",
-    "title": "Fire",
-    "author": "",
-    "width": 2,
     "height": 2
   },
   {
@@ -334,20 +320,6 @@
     "author": "Kristoffer Zetterstrand",
     "width": 1,
     "height": 1
-  },
-  {
-    "id": "water",
-    "title": "Water",
-    "author": "",
-    "width": 2,
-    "height": 2
-  },
-  {
-    "id": "wind",
-    "title": "Wind",
-    "author": "",
-    "width": 2,
-    "height": 2
   },
   {
     "id": "wither",
