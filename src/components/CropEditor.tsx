@@ -134,7 +134,7 @@ export function CropEditor({ img, blocks, picture, crop, onChange, onClose }: Pr
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onKeyDown={onKeyDown}
-          className="relative cursor-move touch-none select-none overflow-hidden rounded outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          className="relative cursor-move touch-none select-none overflow-hidden rounded outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
           style={{ width: iw * scale, height: ih * scale }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -170,7 +170,7 @@ export function CropEditor({ img, blocks, picture, crop, onChange, onClose }: Pr
           max={STEPS}
           value={Math.round(zoomToPosition(crop.zoom) * STEPS)}
           onChange={(e) => zoomTo(positionToZoom(Number(e.target.value) / STEPS))}
-          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-800 accent-emerald-400"
+          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-800 accent-accent-400"
         />
         <span className="w-9 text-right tabular-nums">{crop.zoom.toFixed(1)}×</span>
       </label>
@@ -187,7 +187,7 @@ export function CropEditor({ img, blocks, picture, crop, onChange, onClose }: Pr
         <button
           type="button"
           onClick={onClose}
-          className="h-8 rounded-md bg-emerald-500 px-3 text-xs font-medium text-zinc-950 transition-colors hover:bg-emerald-400"
+          className="h-8 rounded-md bg-accent-500 px-3 text-xs font-medium text-zinc-950 transition-colors hover:bg-accent-400"
         >
           Done
         </button>

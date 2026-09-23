@@ -95,7 +95,7 @@ export function Sidebar() {
           <Link
             href="/"
             title="Back to gallery"
-            className="shimmer-text rounded-sm text-2xl font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="shimmer-text rounded-sm text-2xl font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400"
           >
             {SITE_NAME}
           </Link>
@@ -107,7 +107,7 @@ export function Sidebar() {
           aria-controls="painting-list"
           aria-label={collapsed ? "Show paintings" : "Hide paintings"}
           title={collapsed ? "Show paintings" : "Hide paintings"}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-accent-300 focus-visible:outline-2 focus-visible:outline-accent-400"
         >
           {/* Points where the sidebar goes: left/right beside the page on
               desktop, up/down above it on phones. */}

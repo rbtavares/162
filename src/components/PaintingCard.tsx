@@ -28,14 +28,14 @@ export function PaintingCard({
           cell; the bottom's 64px also leaves room for the title over it. */}
       <Link
         href={href}
-        className="group relative flex aspect-square [container-type:size] items-center justify-center px-12 py-16 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400 md:px-16"
+        className="group relative flex aspect-square [container-type:size] items-center justify-center px-12 py-16 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-400 md:px-16"
       >
         <PaintingModel painting={p} side="min(100cqw, 100cqh)" flies={flies} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-3">
           {/* The size lines up with the last line (the subtitle), at the bottom right. */}
           <div className="flex items-baseline-last justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-medium text-zinc-100 group-hover:text-emerald-200">
+              <h2 className="truncate text-sm font-medium text-zinc-100 group-hover:text-accent-200">
                 {p.title}
               </h2>
               {subtitle && <p className="truncate text-xs text-zinc-500">{subtitle}</p>}

@@ -144,9 +144,9 @@ export function CustomPainting() {
             type="button"
             onClick={() => (adjusting ? closeEditor() : setAdjusting(true))}
             aria-expanded={adjusting}
-            className={`h-8 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-emerald-400 ${
+            className={`h-8 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent-400 ${
               adjusting
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-200"
+                ? "border-accent-500/40 bg-accent-500/15 text-accent-200"
                 : "border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white"
             }`}
           >
@@ -184,7 +184,7 @@ function BlockSelect({
       title={label}
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="h-8 cursor-pointer rounded-md border border-zinc-800 bg-zinc-900 px-1.5 text-zinc-200 outline-none transition-colors hover:border-zinc-700 focus-visible:border-emerald-400"
+      className="h-8 cursor-pointer rounded-md border border-zinc-800 bg-zinc-900 px-1.5 text-zinc-200 outline-none transition-colors hover:border-zinc-700 focus-visible:border-accent-400"
     >
       {Array.from({ length: CUSTOM_MAX_BLOCKS }, (_, i) => i + 1).map((n) => (
         <option key={n} value={n}>
@@ -220,7 +220,7 @@ function FrameSelect({ value, onChange }: { value: string; onChange: (id: string
           aria-label="Frame"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 cursor-pointer rounded-md border border-zinc-800 bg-zinc-900 pl-7 pr-1.5 text-zinc-200 outline-none transition-colors hover:border-zinc-700 focus-visible:border-emerald-400"
+          className="h-8 cursor-pointer rounded-md border border-zinc-800 bg-zinc-900 pl-7 pr-1.5 text-zinc-200 outline-none transition-colors hover:border-zinc-700 focus-visible:border-accent-400"
         >
           {FRAMES.map((f) => (
             <option key={f.id} value={f.id}>
@@ -241,7 +241,7 @@ function FileButton({ busy, onFile }: { busy: boolean; onFile: (file: File | und
         type="button"
         onClick={() => input.current?.click()}
         disabled={busy}
-        className="h-8 rounded-md border border-zinc-800 px-3 text-xs font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white focus-visible:outline-2 focus-visible:outline-emerald-400 disabled:opacity-50"
+        className="h-8 rounded-md border border-zinc-800 px-3 text-xs font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-white focus-visible:outline-2 focus-visible:outline-accent-400 disabled:opacity-50"
       >
         {busy ? "Loading…" : "Change picture"}
       </button>
@@ -283,9 +283,9 @@ function UploadScreen({
           setDragging(false);
           onFile(e.dataTransfer.files[0]);
         }}
-        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-within:border-emerald-400 ${
+        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-within:border-accent-400 ${
           dragging
-            ? "border-emerald-400 bg-emerald-500/10"
+            ? "border-accent-400 bg-accent-500/10"
             : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50"
         }`}
       >
@@ -295,7 +295,7 @@ function UploadScreen({
             Drop a picture here. You pick the size in blocks, at 16 pixels per block.
           </p>
         </div>
-        <span className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
+        <span className="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-zinc-950">
           {busy ? "Loading…" : "Choose a picture"}
         </span>
         <input

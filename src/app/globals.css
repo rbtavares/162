@@ -8,6 +8,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* The accent (links, selection, switches, focus). Change it here only. */
+  --color-accent-200: var(--color-sky-200);
+  --color-accent-300: var(--color-sky-300);
+  --color-accent-400: var(--color-sky-400);
+  --color-accent-500: var(--color-sky-500);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -40,7 +45,7 @@ body {
   background-image: linear-gradient(
     110deg,
     var(--color-zinc-100) 40%,
-    var(--color-emerald-300) 50%,
+    var(--color-accent-300) 50%,
     var(--color-zinc-100) 60%
   );
   background-size: 300% 100%;

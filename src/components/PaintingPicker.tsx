@@ -58,7 +58,7 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
                     title={compact ? p.title : undefined}
                     className={`flex items-center rounded-md text-left transition-colors ${item} ${
                       active
-                        ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"
+                        ? "bg-accent-500/15 text-accent-200 ring-1 ring-accent-500/40"
                         : "text-zinc-300 hover:bg-zinc-800"
                     }`}
                   >
@@ -95,7 +95,7 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
           title={compact ? (custom?.title ?? "Custom painting") : undefined}
           className={`flex items-center rounded-md text-left transition-colors ${item} ${
             selectedId === CUSTOM_ID
-              ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"
+              ? "bg-accent-500/15 text-accent-200 ring-1 ring-accent-500/40"
               : "text-zinc-300 hover:bg-zinc-800"
           }`}
         >

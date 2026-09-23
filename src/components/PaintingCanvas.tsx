@@ -843,11 +843,11 @@ function Switch({
       aria-label={title}
       title={title}
       onClick={() => onChange(!checked)}
-      className="flex h-8 items-center gap-2 whitespace-nowrap px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-400"
+      className="flex h-8 items-center gap-2 whitespace-nowrap px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-400"
     >
       <span
         aria-hidden
-        className={`relative h-3.5 w-6 rounded-full transition-colors ${checked ? "bg-emerald-500" : "bg-zinc-700"}`}
+        className={`relative h-3.5 w-6 rounded-full transition-colors ${checked ? "bg-accent-500" : "bg-zinc-700"}`}
       >
         <span
           className={`absolute top-0.5 size-2.5 rounded-full bg-white shadow transition-[left] ${

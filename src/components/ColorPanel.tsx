@@ -81,7 +81,7 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
           type="button"
           onClick={() => onFocusChange(null)}
           disabled={focusColor === null}
-          className="rounded px-2 py-1 text-xs font-medium text-emerald-300 transition-colors hover:bg-zinc-800 disabled:pointer-events-none disabled:text-zinc-600"
+          className="rounded px-2 py-1 text-xs font-medium text-accent-300 transition-colors hover:bg-zinc-800 disabled:pointer-events-none disabled:text-zinc-600"
         >
           Show all
         </button>
@@ -138,8 +138,8 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
                     aria-label={details}
                     title={details}
                     style={{ backgroundColor: hex(c.key) }}
-                    className={`block aspect-square w-full rounded-sm shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 ${
-                      active ? "ring-2 ring-emerald-400 ring-offset-2 ring-offset-background" : ""
+                    className={`block aspect-square w-full rounded-sm shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 ${
+                      active ? "ring-2 ring-accent-400 ring-offset-2 ring-offset-background" : ""
                     } ${focusColor !== null && !active ? "opacity-40 hover:opacity-100" : ""}`}
                   />
                 </li>
