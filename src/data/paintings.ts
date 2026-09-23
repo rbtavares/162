@@ -5,6 +5,19 @@ export const PIXELS_PER_BLOCK = 16;
 /** Id of the painting made from the user's own picture (see /custom). */
 export const CUSTOM_ID = "custom";
 
+/**
+ * Stands in for the custom painting before one has been made: a vanilla-style
+ * canvas that's only partly painted, with the brush still on it.
+ */
+export const CUSTOM_PLACEHOLDER: Painting = {
+  id: "custom-placeholder",
+  title: "Custom painting",
+  author: "",
+  width: 1,
+  height: 1,
+  src: "/custom-painting.png",
+};
+
 export type Painting = {
   id: string;
   title: string;

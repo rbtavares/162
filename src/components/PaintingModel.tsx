@@ -23,6 +23,11 @@ type Props = {
    * between pages; FlightOverlay turns it.
    */
   still?: boolean;
+  /**
+   * Whether clicking it flies the painting to its page. Off for a painting
+   * that won't be on the page it opens (the custom painting's placeholder).
+   */
+  flies?: boolean;
 };
 
 /** One full turn, in ms. */
@@ -199,10 +204,10 @@ function useFlightEnd(
  * painting, the other faces use the in-game painting back texture, and the
  * depth equals one painting pixel. Spins while the enclosing `.group` is hovered.
  */
-export function PaintingModel({ painting, side, still = false }: Props) {
+export function PaintingModel({ painting, side, still = false, flies = true }: Props) {
   const sceneRef = useRef<HTMLDivElement>(null);
   const spin = useSpin(sceneRef, !still);
-  useFlightEnd(sceneRef, spin, painting, !still);
+  useFlightEnd(sceneRef, spin, painting, !still && flies);
   // While this painting is in the air, the flying copy stands in for it.
   const hidden = useHiddenForFlight(painting.id) && !still;
   const max = Math.max(painting.width, painting.height);

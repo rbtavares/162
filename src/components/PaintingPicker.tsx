@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CUSTOM_ID, paintings, paintingSrc, type Painting } from "@/data/paintings";
-import { PlusIcon } from "@/components/icons";
+import { CUSTOM_ID, CUSTOM_PLACEHOLDER, paintings, paintingSrc, type Painting } from "@/data/paintings";
 import { useCustomPainting } from "@/lib/customStore";
 
 type Props = {
@@ -27,6 +26,7 @@ const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
 
 export function PaintingPicker({ selectedId, compact = false }: Props) {
   const custom = useCustomPainting();
+  const thumbnail = custom ?? CUSTOM_PLACEHOLDER;
   // Compact items are squares hugging the thumbnail, so the selection outline frames it evenly.
   const item = compact ? "mx-auto size-11 shrink-0 justify-center" : "w-full gap-3 px-2 py-1.5";
   const label = compact ? "sr-only" : "min-w-0";
@@ -42,22 +42,16 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
             : "text-zinc-300 hover:bg-zinc-800"
         }`}
       >
-        {custom ? (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-zinc-800/80">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={paintingSrc(custom)}
-              alt=""
-              width={custom.width * 16}
-              height={custom.height * 16}
-              className="max-h-8 max-w-8 object-contain [image-rendering:pixelated]"
-            />
-          </span>
-        ) : (
-          <span className="flex size-9 shrink-0 items-center justify-center rounded border border-dashed border-zinc-700 text-zinc-400">
-            <PlusIcon className="size-4" />
-          </span>
-        )}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-zinc-800/80">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={paintingSrc(thumbnail)}
+            alt=""
+            width={thumbnail.width * 16}
+            height={thumbnail.height * 16}
+            className="max-h-8 max-w-8 object-contain [image-rendering:pixelated]"
+          />
+        </span>
         <span className={label}>
           <span className="block truncate text-sm font-medium">{custom?.title ?? "Custom painting"}</span>
           <span className="block truncate text-xs text-zinc-500">
