@@ -36,7 +36,9 @@ body {
   height: 100%;
   image-rendering: pixelated;
 }
-.group:hover .p3d-flat {
+/* PaintingModel adds .p3d-active while the box is shown (spinning or
+   settling back) and .p3d-spinning while hovered; it drives the spin itself. */
+.p3d-active .p3d-flat {
   visibility: hidden;
 }
 .p3d-tilt {
@@ -44,24 +46,22 @@ body {
   height: 100%;
   visibility: hidden;
   transform-style: preserve-3d;
+  /* Pushed back half the box's depth so its front face sits exactly where
+     the flat image was, instead of looking slightly bigger. */
+  transform: rotateX(0deg) translateZ(calc(var(--d) / -2));
   transition: transform 0.5s ease;
 }
-.group:hover .p3d-tilt {
+.p3d-active .p3d-tilt {
   visibility: visible;
-  transform: rotateX(-14deg);
+}
+.p3d-spinning .p3d-tilt {
+  transform: rotateX(-14deg) translateZ(calc(var(--d) / -2));
 }
 .p3d-box {
   position: relative;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-}
-.group:hover .p3d-box {
-  animation: p3d-spin 8s linear infinite;
-}
-@keyframes p3d-spin {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
 }
 .p3d-face {
   position: absolute;
@@ -108,7 +108,4 @@ body {
   top: calc(100% - var(--d) / 2);
   transform: rotateX(-90deg);
 }
-@media (prefers-reduced-motion: reduce) {
-  .group:hover .p3d-box { animation: none; }
-  .group:hover .p3d-tilt { transform: none; }
-}
+/* With reduced motion PaintingModel never starts, so the flat image stays. */
