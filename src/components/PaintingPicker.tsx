@@ -27,21 +27,25 @@ const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
 export function PaintingPicker({ selectedId, compact = false }: Props) {
   const custom = useCustomPainting();
   const thumbnail = custom ?? CUSTOM_PLACEHOLDER;
-  // Compact items are squares hugging the thumbnail, so the selection outline frames it evenly.
-  const item = compact ? "mx-auto size-11 shrink-0 justify-center" : "w-full gap-3 px-2 py-1.5";
+  // Items, headings and gaps are the same size in both modes, so thumbnails
+  // stay exactly where they are when the sidebar collapses or expands: 6px of
+  // side padding puts a 36px thumbnail dead center in the 48px-wide strip.
+  // (In the strip the names are hidden for screen readers only, taking no room.)
+  const item = "w-full gap-3 px-1.5 py-1.5";
   const label = compact ? "sr-only" : "min-w-0";
+  // Group headings: "1×1 blocks" in the full list, just "1×1" centered in the
+  // compact strip. They never wrap: while the sidebar narrows or widens they
+  // are cut off at its edge instead.
+  const heading = `mb-2 overflow-hidden whitespace-nowrap text-[11px] font-semibold uppercase text-zinc-500 ${
+    compact ? "text-center" : "px-1.5 tracking-widest"
+  }`;
   return (
-    <nav aria-label="Paintings" className={`flex flex-col ${compact ? "gap-3" : "gap-5"}`}>
+    <nav aria-label="Paintings" className="flex flex-col gap-5">
       {sortedGroups.map(([size, items]) => (
-        <section key={size} className={compact ? "border-t border-zinc-800 pt-3" : undefined}>
-          <h2
-            className={
-              compact
-                ? "sr-only"
-                : "mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500"
-            }
-          >
-            {size} blocks
+        <section key={size}>
+          <h2 className={heading}>
+            {size}
+            <span className={compact ? "sr-only" : undefined}> blocks</span>
           </h2>
           <ul className="flex flex-col gap-0.5">
             {items.map((p) => {
@@ -58,14 +62,16 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
                         : "text-zinc-300 hover:bg-zinc-800"
                     }`}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-zinc-800/80">
+                    {/* The painting fills the box by its longest side (a 1×1 fills it,
+                        a 1×2 its full height), scaled up with crisp pixels. */}
+                    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded bg-zinc-800/80">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={paintingSrc(p)}
                         alt=""
                         width={p.width * 16}
                         height={p.height * 16}
-                        className="max-h-8 max-w-8 object-contain [image-rendering:pixelated]"
+                        className="size-full object-contain [image-rendering:pixelated]"
                       />
                     </span>
                     <span className={label}>
@@ -81,14 +87,8 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
           </ul>
         </section>
       ))}
-      <section className={compact ? "border-t border-zinc-800 pt-3" : undefined}>
-        <h2
-          className={
-            compact ? "sr-only" : "mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500"
-          }
-        >
-          Custom
-        </h2>
+      <section>
+        <h2 className={heading}>Custom</h2>
         <Link
           href="/custom"
           aria-current={selectedId === CUSTOM_ID ? "page" : undefined}
@@ -99,14 +99,14 @@ export function PaintingPicker({ selectedId, compact = false }: Props) {
               : "text-zinc-300 hover:bg-zinc-800"
           }`}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-zinc-800/80">
+          <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded bg-zinc-800/80">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={paintingSrc(thumbnail)}
               alt=""
               width={thumbnail.width * 16}
               height={thumbnail.height * 16}
-              className="max-h-8 max-w-8 object-contain [image-rendering:pixelated]"
+              className="size-full object-contain [image-rendering:pixelated]"
             />
           </span>
           <span className={label}>

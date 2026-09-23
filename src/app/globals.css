@@ -33,6 +33,39 @@ body {
   }
 }
 
+/* Text that a band of accent-colored light sweeps across once on hover. The
+   text is painted by its background (clipped to the glyphs): a wide gradient,
+   plain except for the band, slid from one end to the other. */
+.shimmer-text {
+  background-image: linear-gradient(
+    110deg,
+    var(--color-zinc-100) 40%,
+    var(--color-emerald-300) 50%,
+    var(--color-zinc-100) 60%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.shimmer-text:hover {
+  animation: shimmer 900ms ease-out;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text:hover {
+    animation: none;
+  }
+}
+
 /* 3D painting model (see PaintingModel.tsx) */
 .p3d-scene {
   position: relative;

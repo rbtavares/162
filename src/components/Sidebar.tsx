@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CUSTOM_ID } from "@/data/paintings";
 import { SITE_NAME } from "@/data/site";
+import { OverlayScrollbar } from "@/components/OverlayScrollbar";
 import { PaintingPicker } from "@/components/PaintingPicker";
 import { usePreference } from "@/lib/preferences";
+import { prefersReducedMotion } from "@/lib/paintingFlight";
+
+/** How long the sidebar takes to widen or narrow (matches duration-300 below). */
+const SLIDE_MS = 300;
 
 /** Matches Tailwind's `md` breakpoint, where the sidebar moves to the side. */
 const DESKTOP = "(min-width: 48rem)";
@@ -43,81 +48,109 @@ export function Sidebar() {
   const collapsed = collapsedChoice ?? !isDesktop;
   // Desktop only: a thin strip of thumbnails.
   const rail = collapsedChoice === true;
+  // Phones: the list is shown only once opened.
+  const listOpen = collapsedChoice === false;
+
+  // Collapsing, the sidebar narrows with its full list still in place (names
+  // cut off as it goes) and only then switches to the compact strip, whose
+  // thumbnails sit where the full list's were. Expanding switches straight
+  // back, and the names are revealed as it widens.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [narrowing, setNarrowing] = useState(false);
+  const compact = rail && !narrowing;
+  const narrowTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const settle = () => {
+    clearTimeout(narrowTimer.current);
+    setNarrowing(false);
+  };
+  useEffect(() => () => clearTimeout(narrowTimer.current), []);
+
+  const toggle = () => {
+    if (!collapsed && isDesktop && !prefersReducedMotion()) {
+      setNarrowing(true);
+      // In case the width transition doesn't run or report its end.
+      narrowTimer.current = setTimeout(settle, SLIDE_MS + 100);
+    } else {
+      settle();
+    }
+    setCollapsed(!collapsed);
+  };
 
   return (
     <aside
-      className={`flight-enter-left flex shrink-0 flex-col border-b border-zinc-800 md:border-b-0 md:border-r ${
+      onTransitionEnd={(e) => {
+        if (e.target === e.currentTarget && e.propertyName === "width") settle();
+      }}
+      className={`flight-enter-left flex shrink-0 flex-col border-b border-zinc-800 md:overflow-hidden md:border-b-0 md:border-r md:transition-[width] md:duration-300 md:ease-in-out motion-reduce:transition-none ${
         rail ? "md:w-16" : "md:w-72"
       }`}
     >
       <header
         className={`flex h-16 shrink-0 items-center justify-between gap-3 border-b border-zinc-800 px-4 ${
-          rail ? "md:justify-center md:px-0" : ""
+          compact ? "md:justify-center md:px-0" : ""
         }`}
       >
-        <div className={`min-w-0 ${rail ? "md:hidden" : ""}`}>
-          <h1 className="truncate text-sm font-semibold tracking-tight">{SITE_NAME}</h1>
+        <h1 className={`min-w-0 overflow-hidden ${compact ? "md:hidden" : ""}`}>
+          {/* The name doubles as the way back to the gallery. */}
           <Link
             href="/"
-            className="group/back -ml-0.5 inline-flex items-center gap-0.5 text-xs text-zinc-500 transition-colors hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400"
+            title="Back to gallery"
+            className="shimmer-text rounded-sm text-2xl font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
           >
-            <svg
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-              className="size-3 transition-transform group-hover/back:-translate-x-0.5"
-            >
-              <path d="M10 3.5 5.5 8l4.5 4.5" />
-            </svg>
-            Back to gallery
+            {SITE_NAME}
           </Link>
-        </div>
+        </h1>
         <button
           type="button"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={toggle}
           aria-expanded={!collapsed}
           aria-controls="painting-list"
           aria-label={collapsed ? "Show paintings" : "Hide paintings"}
           title={collapsed ? "Show paintings" : "Hide paintings"}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md border border-zinc-800 text-zinc-400 transition-colors hover:border-zinc-700 hover:bg-zinc-900 hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400"
         >
-          <SidebarIcon className="size-4" />
+          {/* Points where the sidebar goes: left/right beside the page on
+              desktop, up/down above it on phones. */}
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className={`size-4 transition-transform duration-200 ${
+              collapsed ? "-rotate-90 md:rotate-180" : "rotate-90 md:rotate-0"
+            }`}
+          >
+            <path d="M10 3.5 5.5 8l4.5 4.5" />
+          </svg>
         </button>
       </header>
+      {/* On phones the list slides open and shut (its row grows from nothing);
+          on desktop it simply fills the sidebar. */}
       <div
-        id="painting-list"
-        // `relative` keeps the collapsed list's screen-reader-only labels (which
-        // are absolutely positioned) inside it; otherwise they stretch the page.
-        className={`relative max-h-64 overflow-y-auto p-2 md:block md:max-h-none md:flex-1 md:overscroll-contain ${
-          collapsedChoice === false ? "" : "hidden"
-        } ${
-          // A scrollbar would take a quarter of the narrow strip; it still scrolls.
-          rail ? "md:[scrollbar-width:none] md:[&::-webkit-scrollbar]:hidden" : ""
+        inert={!isDesktop && !listOpen}
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none md:flex md:min-h-0 md:flex-1 md:flex-col ${
+          listOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >
-        <PaintingPicker selectedId={selectedId} compact={rail} />
+        <div className="relative flex min-h-0 max-h-64 flex-col overflow-hidden md:max-h-none md:flex-1">
+          <div
+            ref={listRef}
+            id="painting-list"
+            // `relative` keeps the collapsed list's screen-reader-only labels (which
+            // are absolutely positioned) inside it; otherwise they stretch the page.
+            // Its own scrollbar is hidden in favour of the overlay one below.
+            className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] md:overscroll-contain [&::-webkit-scrollbar]:hidden"
+          >
+            <div className="p-2">
+              <PaintingPicker selectedId={selectedId} compact={compact} />
+            </div>
+          </div>
+          <OverlayScrollbar viewport={listRef} />
+        </div>
       </div>
     </aside>
-  );
-}
-
-function SidebarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-      aria-hidden
-      className={className}
-    >
-      <rect x="2" y="2.75" width="12" height="10.5" rx="1.5" />
-      <path d="M6 2.75v10.5" />
-    </svg>
   );
 }
