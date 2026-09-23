@@ -48,3 +48,7 @@ Then open [http://localhost:3000](http://localhost:3000).
 Minecraft's paintings are by Kristoffer Zetterstrand, Sarah Boeving and Jens Bergensten, and belong to Mojang Studios. This is a fan project and is not affiliated with or endorsed by Mojang or Microsoft.
 
 Built with Claude Fable 5.1 and Opus 5.5
+
+## License
+
+The code is released under the [MIT License](LICENSE). The painting textures in `public/paintings/` belong to Mojang Studios and aren't covered by it.
