@@ -13,6 +13,8 @@ type Props = {
   onPalette?: (palette: PaletteColor[]) => void;
   /** Reports how many distinct colors the original painting has. */
   onTotalColors?: (total: number) => void;
+  /** Called with the displayed color (0xRRGGBB) of a clicked pixel. */
+  onPickColor?: (color: number) => void;
 };
 
 /** Space (CSS px) left around the painting when it is fitted to the view. */
@@ -24,6 +26,8 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 16;
 const MAX_CELL = 96;
 const BUTTON_ZOOM = 1.5;
+/** How far (CSS px) a pointer can move and still count as a click. */
+const CLICK_SLOP = 5;
 
 /** Screen position of painting pixel (0, 0) and CSS px per painting pixel. */
 type View = { x: number; y: number; scale: number };
@@ -109,6 +113,7 @@ export function PaintingCanvas({
   focusColor,
   onPalette,
   onTotalColors,
+  onPickColor,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,20 +214,97 @@ export function PaintingCanvas({
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [zoomAt]);
 
-  // Drag to pan; two fingers to pinch-zoom.
+  /** Painting pixel under a point in the canvas, or null outside the painting. */
+  const pixelAt = (cx: number, cy: number) => {
+    const v = latest.current.view;
+    const x = Math.floor((cx - v.x) / v.scale);
+    const y = Math.floor((cy - v.y) / v.scale);
+    return x >= 0 && y >= 0 && x < pw && y < ph ? { x, y } : null;
+  };
+
+  /** Displayed color under a point in the canvas; null off the painting or on a transparent pixel. */
+  const colorAt = (cx: number, cy: number) => {
+    const p = pixelAt(cx, cy);
+    if (!p || !simplified) return null;
+    const d = simplified.image.data;
+    const o = (p.y * pw + p.x) * 4;
+    return d[o + 3] === 0 ? null : (d[o] << 16) | (d[o + 1] << 8) | d[o + 2];
+  };
+
+  /*
+   * With a mouse or pen, clicking the painting picks a color and dragging it
+   * does nothing, so a click that wobbles doesn't nudge the view. Dragging
+   * pans off the painting, or anywhere with Cmd/Ctrl held. Touch has no
+   * modifier keys, so there a tap picks and a drag always pans. Two fingers
+   * pinch-zoom.
+   */
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<{ pick: boolean; x: number; y: number; moved: boolean } | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Whether the mouse would pick a color where it is, for the cursor.
+  const [picking, setPicking] = useState(false);
+  const hoverAt = useRef<{ x: number; y: number } | null>(null);
+
+  const localPoint = (e: { clientX: number; clientY: number }) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const updatePicking = (point: { x: number; y: number } | null, panKey: boolean) => {
+    hoverAt.current = point;
+    setPicking(point !== null && !panKey && pixelAt(point.x, point.y) !== null);
+  };
+
+  // Pressing or releasing Cmd/Ctrl changes the cursor without the mouse moving.
+  const updatePickingRef = useRef(updatePicking);
+  useEffect(() => {
+    updatePickingRef.current = updatePicking;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Meta" && e.key !== "Control") return;
+      updatePickingRef.current(hoverAt.current, e.metaKey || e.ctrlKey);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+    };
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    setDragging(true);
+    if (pointers.current.size > 1) {
+      // A second finger turns the gesture into a pinch.
+      if (gesture.current) gesture.current = { ...gesture.current, pick: false, moved: true };
+      setDragging(true);
+      return;
+    }
+    const point = localPoint(e);
+    const pick =
+      e.pointerType !== "touch" &&
+      e.button === 0 &&
+      !(e.metaKey || e.ctrlKey) &&
+      pixelAt(point.x, point.y) !== null;
+    gesture.current = { pick, ...point, moved: false };
+    if (!pick) setDragging(true);
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const pts = pointers.current;
     const prev = pts.get(e.pointerId);
-    if (!prev) return;
+    if (!prev) {
+      if (e.pointerType !== "touch") updatePicking(localPoint(e), e.metaKey || e.ctrlKey);
+      return;
+    }
+    const g = gesture.current;
+    if (g && !g.moved) {
+      const p = localPoint(e);
+      g.moved = Math.hypot(p.x - g.x, p.y - g.y) > CLICK_SLOP;
+    }
+    if (g?.pick) return;
     const others = [...pts].filter(([id]) => id !== e.pointerId).map(([, p]) => p);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const v = latest.current.view;
@@ -248,9 +330,16 @@ export function PaintingCanvas({
     zoomAt(after / before, mx, my);
   };
 
-  const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    pointers.current.delete(e.pointerId);
-    if (pointers.current.size === 0) setDragging(false);
+  const endPointer = (e: React.PointerEvent<HTMLCanvasElement>, click: boolean) => {
+    if (!pointers.current.delete(e.pointerId) || pointers.current.size > 0) return;
+    setDragging(false);
+    const g = gesture.current;
+    gesture.current = null;
+    if (click && g && !g.moved && (g.pick || e.pointerType === "touch")) {
+      const color = colorAt(g.x, g.y);
+      if (color !== null) onPickColor?.(color);
+    }
+    if (e.pointerType !== "touch") updatePicking(localPoint(e), e.metaKey || e.ctrlKey);
   };
 
   // Draw the painting and the pixel grid.
@@ -381,12 +470,18 @@ export function PaintingCanvas({
         aria-label={`${painting.title}, ${pw} by ${ph} pixels`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerUp={(e) => endPointer(e, true)}
+        onPointerCancel={(e) => endPointer(e, false)}
+        onPointerLeave={(e) => {
+          if (e.pointerType !== "touch" && !pointers.current.size) updatePicking(null, false);
+        }}
         className={`absolute inset-0 h-full w-full touch-none select-none ${
-          dragging ? "cursor-grabbing" : "cursor-grab"
+          dragging ? "cursor-grabbing" : picking ? "cursor-crosshair" : "cursor-grab"
         }`}
       />
+      <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
+        Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
+      </p>
       <div className="absolute bottom-3 right-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
         <button
           type="button"

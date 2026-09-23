@@ -80,6 +80,8 @@ export function PaintingViewer({ painting, headerRight }: Props) {
                 focusColor={focusColor}
                 onPalette={setPalette}
                 onTotalColors={setTotalColors}
+                // Clicking the highlighted color again clears the highlight.
+                onPickColor={(color) => setFocus(color === focusColor ? null : color)}
               />
             </div>
             <div className="border-t border-zinc-800 px-6 py-4">
