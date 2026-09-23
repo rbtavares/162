@@ -18,8 +18,8 @@ type Props = {
   onPickColor?: (color: number) => void;
 };
 
-/** Space (CSS px) left around the painting when it is fitted to the view. */
-const FIT_GAP = 32;
+/** Space (CSS px) left around the painting when it is fitted to the view; room for the pixel numbers. */
+const FIT_GAP = 40;
 /** Below this many CSS px per painting pixel the pixel grid is hidden. */
 const MIN_GRID_CELL = 4;
 /** Zoom limits relative to the fitted size, and absolute max px per pixel. */
@@ -83,6 +83,82 @@ function focusImage(image: ImageData, color: number) {
   return { image: out, mask };
 }
 
+/** Gap (CSS px) between the painting's edge and its pixel numbers. */
+const NUMBER_GAP = 6;
+/** Label steps tried, smallest first, when numbers don't all fit. */
+const NUMBER_STEPS = [1, 2, 5, 10, 20, 50, 100];
+const NUMBER_COLOR = "rgba(161,161,170,0.9)";
+const NUMBER_LIT = "rgba(255,255,255,1)";
+const NUMBER_DIM = "rgba(113,113,122,0.3)";
+/** Band behind the numbers once they stick to the view's edge over the painting. */
+const NUMBER_BAND = "rgba(16,16,18,0.85)";
+
+let numberFont: string | null = null;
+
+/**
+ * Numbers the painting's columns along its top edge and rows along its left
+ * edge, counting from 1. They thin out to every 2nd, 5th, 10th… when pixels
+ * are too small for all of them, stick to the view's edge when the painting's
+ * edge is scrolled away, and dim where the focused color isn't present.
+ */
+function drawNumbers(
+  ctx: CanvasRenderingContext2D,
+  opts: {
+    width: number;
+    height: number;
+    /** Screen x of every column edge and y of every row edge. */
+    cols: Int32Array;
+    rows: Int32Array;
+    box: { left: number; top: number; right: number; bottom: number };
+    scale: number;
+    focusLines: { cols: Uint8Array; rows: Uint8Array } | null;
+  },
+) {
+  const { width: w, height: h, cols, rows, box, scale, focusLines } = opts;
+  const pw = cols.length - 1;
+  const ph = rows.length - 1;
+  numberFont ??= getComputedStyle(document.body).fontFamily || "sans-serif";
+  const size = Math.round(Math.min(12, Math.max(9, scale * 0.5)));
+  ctx.font = `${size}px ${numberFont}`;
+  const digitWidth = ctx.measureText("0").width;
+  const labelWidth = (n: number) => String(n).length * digitWidth;
+
+  const colStep = NUMBER_STEPS.find((s) => s * scale >= labelWidth(pw) + 4) ?? 100;
+  const rowStep = NUMBER_STEPS.find((s) => s * scale >= size + 2) ?? 100;
+  const color = (lit: Uint8Array | undefined, i: number) =>
+    !lit ? NUMBER_COLOR : lit[i] ? NUMBER_LIT : NUMBER_DIM;
+
+  // Top: centered over each column, above the painting or pinned to the top.
+  const y = Math.max(box.top - NUMBER_GAP - size / 2, size / 2 + 4);
+  if (y + size / 2 + NUMBER_GAP > box.top) {
+    ctx.fillStyle = NUMBER_BAND;
+    ctx.fillRect(Math.max(0, box.left), 0, Math.min(w, box.right) - Math.max(0, box.left), y + size / 2 + 4);
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (let x = colStep - 1; x < pw; x += colStep) {
+    const cx = (cols[x] + cols[x + 1]) / 2;
+    if (cx < -20 || cx > w + 20) continue;
+    ctx.fillStyle = color(focusLines?.cols, x);
+    ctx.fillText(String(x + 1), cx, y);
+  }
+
+  // Left: right-aligned beside each row, left of the painting or pinned to the left.
+  const wide = labelWidth(ph);
+  const x = Math.max(box.left - NUMBER_GAP, wide + 8);
+  if (x + NUMBER_GAP > box.left) {
+    ctx.fillStyle = NUMBER_BAND;
+    ctx.fillRect(0, Math.max(0, box.top), x + 4, Math.min(h, box.bottom) - Math.max(0, box.top));
+  }
+  ctx.textAlign = "right";
+  for (let r = rowStep - 1; r < ph; r += rowStep) {
+    const cy = (rows[r] + rows[r + 1]) / 2;
+    if (cy < -20 || cy > h + 20) continue;
+    ctx.fillStyle = color(focusLines?.rows, r);
+    ctx.fillText(String(r + 1), x, cy);
+  }
+}
+
 function fitView(width: number, height: number, pw: number, ph: number): View {
   const scale = Math.max(
     0.1,
@@ -130,6 +206,7 @@ export function PaintingCanvas({
   const pixels = usePaintingPixels(src);
   const [showGrid, setShowGrid] = usePreference("pixel-grid", true);
   const [showBlocks, setShowBlocks] = usePreference("block-edges", true);
+  const [showNumbers, setShowNumbers] = usePreference("pixel-numbers", true);
   const hasBlocks = painting.width > 1 || painting.height > 1;
 
   const analysis = useMemo(() => (pixels ? analyzeImage(pixels) : null), [pixels]);
@@ -155,8 +232,18 @@ export function PaintingCanvas({
       focusColor === null
         ? { image: simplified.image, mask: null }
         : focusImage(simplified.image, focusColor);
-    return { mask, fills: pixelsByColor(image) };
-  }, [simplified, focusColor]);
+    // Rows and columns holding the focused color, so their numbers stay lit.
+    let focusLines: { cols: Uint8Array; rows: Uint8Array } | null = null;
+    if (mask) {
+      focusLines = { cols: new Uint8Array(pw), rows: new Uint8Array(ph) };
+      for (let i = 0; i < mask.length; i++) {
+        if (!mask[i]) continue;
+        focusLines.cols[i % pw] = 1;
+        focusLines.rows[(i / pw) | 0] = 1;
+      }
+    }
+    return { mask, focusLines, fills: pixelsByColor(image) };
+  }, [simplified, focusColor, pw, ph]);
 
   const fitted = useMemo(
     () => fitView(size.width, size.height, pw, ph),
@@ -462,7 +549,19 @@ export function PaintingCanvas({
       }
       ctx.stroke();
     }
-  }, [painting, pw, ph, size, view, display, showGrid, showBlocks, hasBlocks]);
+
+    if (showNumbers) {
+      drawNumbers(ctx, {
+        width: w,
+        height: h,
+        cols,
+        rows,
+        box: { left, top, right, bottom },
+        scale: view.scale,
+        focusLines: display.focusLines,
+      });
+    }
+  }, [painting, pw, ph, size, view, display, showGrid, showBlocks, hasBlocks, showNumbers]);
 
   const center = () => [size.width / 2, size.height / 2] as const;
 
@@ -489,6 +588,7 @@ export function PaintingCanvas({
       <div className="absolute bottom-3 right-3 flex flex-wrap items-center justify-end gap-2">
         <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
           <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
+          <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
           <Switch
             label="Blocks"
             title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
