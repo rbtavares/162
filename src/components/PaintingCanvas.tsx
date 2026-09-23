@@ -593,53 +593,51 @@ export function PaintingCanvas({
       <p className="pointer-events-none absolute left-3 top-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
         Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
       </p>
+      <div className="absolute right-3 top-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
+        <button
+          type="button"
+          onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
+          aria-label="Zoom out"
+          className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+        >
+          −
+        </button>
+        <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
+          {Math.round((view.scale / fitted.scale) * 100)}%
+        </span>
+        <button
+          type="button"
+          onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
+          aria-label="Zoom in"
+          className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => setUserView(null)}
+          disabled={!zoomed}
+          className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
+        >
+          Reset
+        </button>
+      </div>
       <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
         {controls && (
           <div className="w-80 max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
             {controls}
           </div>
         )}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
-            <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
-            <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
-            <Switch
-              label="Blocks"
-              title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
-              checked={showBlocks}
-              onChange={setShowBlocks}
-              disabled={!hasBlocks}
-            />
-          </div>
-          <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
-            <button
-              type="button"
-              onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
-              aria-label="Zoom out"
-              className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              −
-            </button>
-            <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
-              {Math.round((view.scale / fitted.scale) * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
-              aria-label="Zoom in"
-              className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserView(null)}
-              disabled={!zoomed}
-              className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
-            >
-              Reset
-            </button>
-          </div>
+        <div className="ml-auto flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
+          <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
+          <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
+          <Switch
+            label="Blocks"
+            title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
+            checked={showBlocks}
+            onChange={setShowBlocks}
+            disabled={!hasBlocks}
+          />
         </div>
       </div>
     </div>
