@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #101012;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,15 +12,103 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* 3D painting model (see PaintingModel.tsx) */
+.p3d-scene {
+  position: relative;
+  perspective: 1000px;
+  width: var(--fw);
+  height: var(--fh);
+}
+.p3d-flat {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.group:hover .p3d-flat {
+  visibility: hidden;
+}
+.p3d-tilt {
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+}
+.group:hover .p3d-tilt {
+  visibility: visible;
+  transform: rotateX(-14deg);
+}
+.p3d-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.group:hover .p3d-box {
+  animation: p3d-spin 8s linear infinite;
+}
+@keyframes p3d-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+.p3d-face {
+  position: absolute;
+  image-rendering: pixelated;
+  background-image: url("/paintings/back.png");
+  background-size: var(--block) var(--block);
+}
+.p3d-front {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: none;
+  transform: translateZ(calc(var(--d) / 2));
+}
+.p3d-back {
+  inset: 0;
+  transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+}
+.p3d-left,
+.p3d-right {
+  top: 0;
+  width: var(--d);
+  height: 100%;
+}
+.p3d-left {
+  left: calc(var(--d) / -2);
+  transform: rotateY(-90deg);
+}
+.p3d-right {
+  left: calc(100% - var(--d) / 2);
+  transform: rotateY(90deg);
+}
+.p3d-top,
+.p3d-bottom {
+  left: 0;
+  width: 100%;
+  height: var(--d);
+}
+.p3d-top {
+  top: calc(var(--d) / -2);
+  transform: rotateX(90deg);
+}
+.p3d-bottom {
+  top: calc(100% - var(--d) / 2);
+  transform: rotateX(-90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .p3d-box { animation: none; }
+  .group:hover .p3d-tilt { transform: none; }
 }
