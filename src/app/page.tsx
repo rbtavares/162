@@ -11,7 +11,7 @@ const sorted = [...paintings].sort(
 
 export default function GalleryPage() {
   return (
-    <div className="w-full">
+    <div className="gallery-root w-full">
       <header className="px-4 py-8 md:px-8 md:py-10">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           Minecraft Painting Guide

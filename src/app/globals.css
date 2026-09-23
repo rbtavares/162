@@ -109,3 +109,43 @@ body {
   transform: rotateX(-90deg);
 }
 /* With reduced motion PaintingModel never starts, so the flat image stays. */
+
+/* Page transitions around a painting's flight (see paintingFlight.ts). While a
+   painting flies between the gallery and its page, <html data-flight> is set:
+   "open" going to the painting, "close" coming back. */
+@keyframes flight-fade-out {
+  to { opacity: 0; transform: scale(0.985); }
+}
+@keyframes flight-fade-in {
+  from { opacity: 0; }
+}
+@keyframes flight-from-left {
+  from { opacity: 0; transform: translateX(-24px); }
+}
+@keyframes flight-from-right {
+  from { opacity: 0; transform: translateX(24px); }
+}
+@keyframes flight-from-top {
+  from { opacity: 0; transform: translateY(-12px); }
+}
+@keyframes flight-from-bottom {
+  from { opacity: 0; transform: translateY(12px); }
+}
+html[data-flight="open"] .gallery-root {
+  animation: flight-fade-out 180ms ease-in forwards;
+}
+html[data-flight="close"] .gallery-root {
+  animation: flight-fade-in 380ms ease-out both;
+}
+html[data-flight="open"] .flight-enter-left {
+  animation: flight-from-left 460ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+}
+html[data-flight="open"] .flight-enter-right {
+  animation: flight-from-right 460ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+html[data-flight="open"] .flight-enter-top {
+  animation: flight-from-top 420ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+}
+html[data-flight="open"] .flight-enter-bottom {
+  animation: flight-from-bottom 420ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+}

@@ -4,6 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { PIXELS_PER_BLOCK, minColors, paintingSrc, type Painting } from "@/data/paintings";
 import { analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
 import { usePreference } from "@/lib/preferences";
+import {
+  currentFlight,
+  landFlight,
+  midAir,
+  prefersReducedMotion,
+  revealFlight,
+  startFlight,
+  useFlight,
+  useFlightStage,
+  type Rect,
+} from "@/lib/paintingFlight";
 
 type Props = {
   painting: Painting;
@@ -202,6 +213,8 @@ export function PaintingCanvas({
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** Everything drawn over the painting, on its own layer so it can fade in as one. */
+  const overlayRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   // The user's zoom/pan for this image; null means fitted to the view. Keyed by
   // image rather than id so resizing a custom painting refits it.
@@ -217,7 +230,15 @@ export function PaintingCanvas({
   const [showNumbers, setShowNumbers] = usePreference("pixel-numbers", true);
   const hasBlocks = painting.width > 1 || painting.height > 1;
 
-  const analysis = useMemo(() => (pixels ? analyzeImage(pixels) : null), [pixels]);
+  // Arriving from the gallery, the canvas is hidden while the painting flies in
+  // (see paintingFlight). Counting and sorting the colors can block the page
+  // for a while on big paintings, so it waits until the painting has landed.
+  const flight = useFlight();
+  const { inAir: inFlight, covered } = useFlightStage(painting.id);
+  const analysis = useMemo(
+    () => (pixels && !inFlight ? analyzeImage(pixels) : null),
+    [pixels, inFlight],
+  );
 
   useEffect(() => {
     if (analysis) onTotalColors?.(analysis.colors.length);
@@ -265,6 +286,74 @@ export function PaintingCanvas({
   useEffect(() => {
     latest.current = { view, fitted, src };
   });
+
+  /** Where the painting is on screen with view `v`, edges snapped like the drawing. */
+  const screenRect = useCallback(
+    (v: View): Rect | null => {
+      const wrap = wrapRef.current;
+      if (!wrap) return null;
+      const box = wrap.getBoundingClientRect();
+      const left = Math.round(v.x);
+      const top = Math.round(v.y);
+      return {
+        left: box.left + left,
+        top: box.top + top,
+        width: Math.round(v.x + pw * v.scale) - left,
+        height: Math.round(v.y + ph * v.scale) - top,
+      };
+    },
+    [pw, ph],
+  );
+
+  // The painting page end of a flight from the gallery (see paintingFlight):
+  // once laid out, say where the painting will sit; the canvas stays hidden
+  // until the flying copy has landed there.
+  // Reported again whenever the fit changes while it's in the air, e.g. once
+  // the previous page's scrollbar is gone.
+  useEffect(() => {
+    const f = currentFlight();
+    if (f?.direction !== "open" || f.painting.id !== painting.id || size.width === 0) return;
+    const rect = screenRect(fitted);
+    if (rect) landFlight(rect);
+  }, [flight, painting.id, size.width, fitted, screenRect]);
+
+  // Heading back to the gallery (its link, or the browser's back button):
+  // the painting flies from wherever it is on screen back into its card.
+  useEffect(() => {
+    const takeOff = () => {
+      if (prefersReducedMotion()) return;
+      // Still arriving? Turn around from wherever it is in the air.
+      const air = midAir(painting.id);
+      const from = air?.from ?? screenRect(latest.current.view);
+      const orientation = air?.orientation ?? { y: 0, x: 0 };
+      if (from) startFlight({ painting, direction: "close", from, orientation });
+    };
+    const onClick = (e: MouseEvent) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if ((e.target as Element).closest?.('a[href="/"]')) takeOff();
+    };
+    // Back/forward: the Navigation API announces the traversal before Next
+    // swaps pages; popstate (the fallback) can arrive after this page is gone.
+    const navigation = (window as { navigation?: EventTarget }).navigation;
+    const onNavigate = (e: Event) => {
+      const { navigationType, destination } = e as Event & {
+        navigationType: string;
+        destination: { url: string };
+      };
+      if (navigationType === "traverse" && new URL(destination.url).pathname === "/") takeOff();
+    };
+    const onPopState = () => {
+      if (location.pathname === "/") takeOff();
+    };
+    document.addEventListener("click", onClick, true);
+    if (navigation) navigation.addEventListener("navigate", onNavigate);
+    else window.addEventListener("popstate", onPopState);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      navigation?.removeEventListener("navigate", onNavigate);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [painting, screenRect]);
 
   const setView = useCallback(
     (next: View) => setUserView({ src: latest.current.src, view: next }),
@@ -441,19 +530,28 @@ export function PaintingCanvas({
     if (e.pointerType !== "touch") updatePicking(localPoint(e), e.metaKey || e.ctrlKey);
   };
 
-  // Draw the painting and the pixel grid.
+  // Draw the painting on the bottom layer and the shadow, frame, grid, block
+  // edges, highlight outline and numbers on the top one. Arriving from the
+  // gallery, the painting takes over from the flying copy unseen, then the
+  // top layer fades in as one.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !display || size.width === 0) return;
+    const overlay = overlayRef.current;
+    if (!canvas || !overlay || !display || size.width === 0) return;
     const dpr = window.devicePixelRatio || 1;
     const { width: w, height: h } = size;
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
+    const base = canvas.getContext("2d");
+    const ctx = overlay.getContext("2d");
+    if (!base || !ctx) return;
+    for (const [c, context] of [
+      [canvas, base],
+      [overlay, ctx],
+    ] as const) {
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.clearRect(0, 0, w, h);
+    }
 
     // Pixel edges snapped to whole CSS px so fills and grid lines line up.
     const ex = (x: number) => Math.round(view.x + x * view.scale);
@@ -463,8 +561,13 @@ export function PaintingCanvas({
     const right = ex(pw);
     const bottom = ey(ph);
 
-    // Drop shadow and hairline frame behind the painting.
+    // Drop shadow around the painting, on the top layer but clipped to
+    // outside the painting so it doesn't darken it; then the hairline frame.
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip("evenodd");
     ctx.shadowColor = "rgba(0,0,0,0.6)";
     ctx.shadowBlur = 60;
     ctx.shadowOffsetY = 20;
@@ -480,12 +583,15 @@ export function PaintingCanvas({
     for (let x = 0; x <= pw; x++) cols[x] = ex(x);
     for (let y = 0; y <= ph; y++) rows[y] = ey(y);
 
+    // The painting itself, on black where it's transparent.
+    base.fillStyle = "#000";
+    base.fillRect(left, top, right - left, bottom - top);
     for (const { fill, indices } of display.fills) {
-      ctx.fillStyle = fill;
+      base.fillStyle = fill;
       for (const i of indices) {
         const x = i % pw;
         const y = (i - x) / pw;
-        ctx.fillRect(cols[x], rows[y], cols[x + 1] - cols[x], rows[y + 1] - rows[y]);
+        base.fillRect(cols[x], rows[y], cols[x + 1] - cols[x], rows[y + 1] - rows[y]);
       }
     }
 
@@ -569,6 +675,9 @@ export function PaintingCanvas({
         focusLines: display.focusLines,
       });
     }
+
+    // Drawn: a painting that just flew in can take over from the flying copy.
+    if (currentFlight()?.painting.id === painting.id) revealFlight();
   }, [painting, pw, ph, size, view, display, showGrid, showBlocks, hasBlocks, showNumbers]);
 
   const center = () => [size.width / 2, size.height / 2] as const;
@@ -588,12 +697,19 @@ export function PaintingCanvas({
         }}
         className={`absolute inset-0 h-full w-full touch-none select-none ${
           dragging ? "cursor-grabbing" : picking ? "cursor-crosshair" : "cursor-grab"
+        } ${covered ? "opacity-0" : ""}`}
+      />
+      <canvas
+        ref={overlayRef}
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 h-full w-full transition-opacity duration-150 ${
+          covered ? "opacity-0" : ""
         }`}
       />
-      <p className="pointer-events-none absolute left-3 top-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
+      <p className="flight-enter-top pointer-events-none absolute left-3 top-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
         Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
       </p>
-      <div className="absolute right-3 top-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
+      <div className="flight-enter-top absolute right-3 top-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
         <button
           type="button"
           onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
@@ -622,7 +738,7 @@ export function PaintingCanvas({
           Reset
         </button>
       </div>
-      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
+      <div className="flight-enter-bottom pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
         {controls && (
           <div className="w-80 max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
             {controls}

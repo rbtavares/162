@@ -23,7 +23,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-zinc-800 px-6">
+      <header className="flight-enter-top flex h-16 shrink-0 items-center justify-between gap-4 border-b border-zinc-800 px-6">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold leading-tight">{painting.title}</h2>
           {painting.author && (
@@ -61,7 +61,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
           </div>
         </main>
 
-        <aside className="flex shrink-0 flex-col border-t border-zinc-800 md:w-64 md:border-l md:border-t-0">
+        <aside className="flight-enter-right flex shrink-0 flex-col border-t border-zinc-800 md:w-64 md:border-l md:border-t-0">
           <ColorPanel palette={palette} focusColor={focusColor} onFocusChange={setFocus} />
         </aside>
       </div>

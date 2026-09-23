@@ -45,7 +45,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex shrink-0 flex-col border-b border-zinc-800 md:border-b-0 md:border-r ${
+      className={`flight-enter-left flex shrink-0 flex-col border-b border-zinc-800 md:border-b-0 md:border-r ${
         rail ? "md:w-16" : "md:w-72"
       }`}
     >
