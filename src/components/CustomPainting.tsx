@@ -204,7 +204,7 @@ function FrameSelect({ value, onChange }: { value: string; onChange: (id: string
         {/* Preview of the frame's wood, or a dashed box for none. */}
         <span
           aria-hidden
-          className={`pointer-events-none absolute left-2 size-3.5 rounded-[3px] ${
+          className={`pointer-events-none absolute left-2 size-3.5 rounded-sm ${
             frame.shades.length ? "" : "border border-dashed border-zinc-600"
           }`}
           style={
