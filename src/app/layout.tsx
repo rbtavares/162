@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, TITLE_SEPARATOR } from "@/data/site";
 import { FlightOverlay } from "@/components/FlightOverlay";
 
 const geistSans = Geist({
@@ -14,8 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Minecraft Painting Guide",
-  description: "Browse Minecraft paintings and see the pixel grid that composes each one.",
+  // Pages give their own title, e.g. "Backyard · 16²". The default is only for
+  // pages without one (like "not found").
+  title: { default: SITE_NAME, template: `%s${TITLE_SEPARATOR}${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

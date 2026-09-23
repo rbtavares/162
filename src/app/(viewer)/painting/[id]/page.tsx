@@ -14,7 +14,7 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
   const painting = paintings.find((p) => p.id === id);
-  return { title: painting ? `${painting.title} · Minecraft Painting Guide` : "Painting" };
+  return { title: painting?.title ?? "Painting" };
 }
 
 export default async function PaintingPage({ params }: { params: Params }) {

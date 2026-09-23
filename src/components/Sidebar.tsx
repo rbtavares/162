@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { CUSTOM_ID } from "@/data/paintings";
+import { SITE_NAME } from "@/data/site";
 import { PaintingPicker } from "@/components/PaintingPicker";
 import { usePreference } from "@/lib/preferences";
 
@@ -55,7 +56,7 @@ export function Sidebar() {
         }`}
       >
         <div className={`min-w-0 ${rail ? "md:hidden" : ""}`}>
-          <h1 className="truncate text-sm font-semibold tracking-tight">Minecraft Painting Guide</h1>
+          <h1 className="truncate text-sm font-semibold tracking-tight">{SITE_NAME}</h1>
           <Link
             href="/"
             className="group/back -ml-0.5 inline-flex items-center gap-0.5 text-xs text-zinc-500 transition-colors hover:text-emerald-300 focus-visible:outline-2 focus-visible:outline-emerald-400"
