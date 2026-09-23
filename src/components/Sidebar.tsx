@@ -89,7 +89,9 @@ export function Sidebar() {
       </header>
       <div
         id="painting-list"
-        className={`max-h-64 overflow-y-auto p-2 md:block md:max-h-none md:flex-1 ${
+        // `relative` keeps the collapsed list's screen-reader-only labels (which
+        // are absolutely positioned) inside it; otherwise they stretch the page.
+        className={`relative max-h-64 overflow-y-auto p-2 md:block md:max-h-none md:flex-1 md:overscroll-contain ${
           collapsedChoice === false ? "" : "hidden"
         } ${
           // A scrollbar would take a quarter of the narrow strip; it still scrolls.

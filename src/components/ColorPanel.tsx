@@ -43,7 +43,7 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
           Show all
         </button>
       </div>
-      <ul className="max-h-72 overflow-y-auto p-2 md:max-h-none md:flex-1">
+      <ul className="max-h-72 overflow-y-auto p-2 md:max-h-none md:flex-1 md:overscroll-contain">
         {palette?.map((c, i) => {
           const active = c.key === focusColor;
           return (
