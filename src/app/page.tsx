@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: `Gallery${TITLE_SEPARATOR}${SITE_NAME
 
 export default function GalleryPage() {
   return (
-    <div className="gallery-root w-full">
+    <div className="gallery-root page-width">
       <header className="px-4 py-8 md:px-8 md:py-10">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           {SITE_NAME}

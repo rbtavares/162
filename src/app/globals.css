@@ -22,6 +22,17 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* The widest the page content gets. On bigger screens it's centered, with
+   side borders so it reads as a deliberate column rather than floating. */
+@utility page-width {
+  width: 100%;
+  max-width: 2560px;
+  margin-inline: auto;
+  @media (width > 2560px) {
+    border-inline: 1px solid var(--color-zinc-800);
+  }
+}
+
 /* 3D painting model (see PaintingModel.tsx) */
 .p3d-scene {
   position: relative;

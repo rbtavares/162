@@ -115,7 +115,9 @@ export function CropEditor({ img, blocks, picture, crop, onChange, onClose }: Pr
     <div
       role="dialog"
       aria-label="Adjust picture"
-      className="fixed right-4 top-[4.5rem] z-50 md:right-[15rem] w-[calc(100vw-2rem)] max-w-80 rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm shadow-2xl shadow-black/60"
+      // Phones: pinned under the header. Desktop: hangs off the controls it
+      // opens from, so it stays with the page when the page is width-capped.
+      className="fixed right-4 top-[4.5rem] z-50 w-[calc(100vw-2rem)] max-w-80 md:absolute md:right-0 md:top-[calc(100%+1.5rem)] rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm shadow-2xl shadow-black/60"
     >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-medium text-zinc-100">Adjust picture</h3>

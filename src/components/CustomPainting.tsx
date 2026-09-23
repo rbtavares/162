@@ -124,7 +124,7 @@ export function CustomPainting() {
       key={custom.source}
       painting={painting}
       headerRight={
-        <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-400">
+        <div className="relative flex shrink-0 items-center gap-3 text-sm text-zinc-400">
           {error && (
             <p role="alert" className="hidden max-w-56 truncate text-xs text-red-400 lg:block" title={error}>
               {error}
