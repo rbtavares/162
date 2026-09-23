@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { paintings, paintingSrc, type Painting } from "@/data/paintings";
+import { CUSTOM_ID, paintings, paintingSrc, type Painting } from "@/data/paintings";
+import { PlusIcon } from "@/components/icons";
 
 type Props = {
   selectedId: string;
@@ -24,6 +25,23 @@ const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
 export function PaintingPicker({ selectedId }: Props) {
   return (
     <nav aria-label="Paintings" className="flex flex-col gap-5">
+      <Link
+        href="/custom"
+        aria-current={selectedId === CUSTOM_ID ? "page" : undefined}
+        className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors ${
+          selectedId === CUSTOM_ID
+            ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"
+            : "text-zinc-300 hover:bg-zinc-800"
+        }`}
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded border border-dashed border-zinc-700 text-zinc-400">
+          <PlusIcon className="size-4" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-medium">Custom painting</span>
+          <span className="block truncate text-xs text-zinc-500">From your own picture</span>
+        </span>
+      </Link>
       {sortedGroups.map(([size, items]) => (
         <section key={size}>
           <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">

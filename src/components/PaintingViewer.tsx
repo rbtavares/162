@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { PIXELS_PER_BLOCK, type Painting } from "@/data/paintings";
 import type { PaletteColor } from "@/lib/simplify";
 import { ColorPanel } from "@/components/ColorPanel";
@@ -9,7 +9,13 @@ import { PaintingCanvas } from "@/components/PaintingCanvas";
 import { PaintingPicker } from "@/components/PaintingPicker";
 import { SimplifySlider } from "@/components/SimplifySlider";
 
-export function PaintingViewer({ painting }: { painting: Painting }) {
+type Props = {
+  painting: Painting;
+  /** Replaces the size readout at the right of the painting header. */
+  headerRight?: ReactNode;
+};
+
+export function PaintingViewer({ painting, headerRight }: Props) {
   const [colors, setColors] = useState<number | null>(null);
   const [totalColors, setTotalColors] = useState<number | null>(null);
   const [palette, setPalette] = useState<PaletteColor[] | null>(null);
@@ -57,10 +63,12 @@ export function PaintingViewer({ painting }: { painting: Painting }) {
               <p className="truncate text-sm text-zinc-500">by {painting.author}</p>
             )}
           </div>
-          <p className="shrink-0 text-sm tabular-nums text-zinc-400">
-            {painting.width}×{painting.height} blocks ·{" "}
-            {painting.width * PIXELS_PER_BLOCK}×{painting.height * PIXELS_PER_BLOCK} px
-          </p>
+          {headerRight ?? (
+            <p className="shrink-0 text-sm tabular-nums text-zinc-400">
+              {painting.width}×{painting.height} blocks ·{" "}
+              {painting.width * PIXELS_PER_BLOCK}×{painting.height * PIXELS_PER_BLOCK} px
+            </p>
+          )}
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">

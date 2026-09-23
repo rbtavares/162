@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { paintings } from "@/data/paintings";
 import { PaintingModel } from "@/components/PaintingModel";
+import { PlusIcon } from "@/components/icons";
 
 const sorted = [...paintings].sort(
   (a, b) =>
@@ -17,11 +18,29 @@ export default function GalleryPage() {
           Minecraft Painting Guide
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {paintings.length} paintings. Pick one to see its pixel grid and simplify its colors.
+          {paintings.length} paintings. Pick one to see its pixel grid and simplify its colors, or make your own.
         </p>
       </header>
 
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] gap-px border-y border-zinc-800 bg-zinc-800">
+        <li className="bg-zinc-950">
+          <Link
+            href="/custom"
+            className="group relative flex aspect-square flex-col items-center justify-center gap-4 px-8 text-center outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400"
+          >
+            <span className="flex size-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 text-zinc-400 transition-colors group-hover:border-emerald-400 group-hover:text-emerald-300">
+              <PlusIcon className="size-6" />
+            </span>
+            <span>
+              <span className="block text-sm font-medium text-zinc-100 group-hover:text-emerald-200">
+                Custom painting
+              </span>
+              <span className="block text-xs text-zinc-500">
+                Upload a picture and choose its size in blocks
+              </span>
+            </span>
+          </Link>
+        </li>
         {sorted.map((p) => (
           <li key={p.id} className="bg-zinc-950">
             <Link

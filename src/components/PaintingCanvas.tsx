@@ -28,12 +28,12 @@ const BUTTON_ZOOM = 1.5;
 /** Screen position of painting pixel (0, 0) and CSS px per painting pixel. */
 type View = { x: number; y: number; scale: number };
 
-function usePaintingPixels(painting: Painting) {
-  const [loaded, setLoaded] = useState<{ id: string; pixels: ImageData } | null>(null);
+function usePaintingPixels(src: string) {
+  const [loaded, setLoaded] = useState<{ src: string; pixels: ImageData } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const img = new Image();
-    img.src = paintingSrc(painting);
+    img.src = src;
     img.onload = () => {
       if (cancelled) return;
       const off = document.createElement("canvas");
@@ -41,13 +41,13 @@ function usePaintingPixels(painting: Painting) {
       off.height = img.naturalHeight;
       const ctx = off.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-      setLoaded({ id: painting.id, pixels: ctx.getImageData(0, 0, off.width, off.height) });
+      setLoaded({ src, pixels: ctx.getImageData(0, 0, off.width, off.height) });
     };
     return () => {
       cancelled = true;
     };
-  }, [painting]);
-  return loaded?.id === painting.id ? loaded.pixels : null;
+  }, [src]);
+  return loaded && loaded.src === src ? loaded.pixels : null;
 }
 
 /** Background the dimmed pixels fade toward (matches --background). */
@@ -113,13 +113,15 @@ export function PaintingCanvas({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  // The user's zoom/pan for this painting; null means fitted to the view.
-  const [userView, setUserView] = useState<{ id: string; view: View } | null>(null);
+  // The user's zoom/pan for this image; null means fitted to the view. Keyed by
+  // image rather than id so resizing a custom painting refits it.
+  const [userView, setUserView] = useState<{ src: string; view: View } | null>(null);
 
   const pw = painting.width * PIXELS_PER_BLOCK;
   const ph = painting.height * PIXELS_PER_BLOCK;
 
-  const pixels = usePaintingPixels(painting);
+  const src = paintingSrc(painting);
+  const pixels = usePaintingPixels(src);
 
   const analysis = useMemo(() => (pixels ? analyzeImage(pixels) : null), [pixels]);
 
@@ -151,17 +153,17 @@ export function PaintingCanvas({
     () => fitView(size.width, size.height, pw, ph),
     [size.width, size.height, pw, ph],
   );
-  const zoomed = userView?.id === painting.id;
+  const zoomed = userView !== null && userView.src === src;
   const view = zoomed ? userView.view : fitted;
 
   // Latest values for the event handlers attached outside React.
-  const latest = useRef({ view, fitted, id: painting.id });
+  const latest = useRef({ view, fitted, src });
   useEffect(() => {
-    latest.current = { view, fitted, id: painting.id };
+    latest.current = { view, fitted, src };
   });
 
   const setView = useCallback(
-    (next: View) => setUserView({ id: latest.current.id, view: next }),
+    (next: View) => setUserView({ src: latest.current.src, view: next }),
     [],
   );
 
