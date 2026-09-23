@@ -175,6 +175,16 @@ function drawNumbers(
   }
 }
 
+/**
+ * A mouse wheel moves in whole notches (lines, or ±100/120 px straight up or
+ * down); a trackpad sends a stream of small, often fractional deltas, sideways
+ * too. There's no flag for which is which, so this goes by the shape.
+ */
+function isMouseWheel(e: WheelEvent) {
+  if (e.deltaMode !== 0) return true;
+  return e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 50;
+}
+
 function fitView(width: number, height: number, pw: number, ph: number): View {
   const top = FIT_GAP + FIT_TOP;
   const bottom = FIT_GAP + FIT_BOTTOM;
@@ -355,10 +365,12 @@ export function PaintingCanvas({
     };
   }, [painting, screenRect]);
 
-  const setView = useCallback(
-    (next: View) => setUserView({ src: latest.current.src, view: next }),
-    [],
-  );
+  const setView = useCallback((next: View) => {
+    // Trackpads send several events per frame; each must build on the last,
+    // not on the view as of the last render.
+    latest.current.view = next;
+    setUserView({ src: latest.current.src, view: next });
+  }, []);
 
   /** Zooms by `factor` keeping screen point (cx, cy) fixed. */
   const zoomAt = useCallback(
@@ -386,21 +398,30 @@ export function PaintingCanvas({
     return () => ro.disconnect();
   }, []);
 
-  // Wheel / trackpad pinch zooms around the pointer. Attached manually because
-  // React's wheel listener is passive and can't prevent page scrolling.
+  // Trackpad: pinch zooms around the pointer, two-finger swipes pan. Mouse
+  // wheel (or ⌘/Ctrl + scroll) zooms. Attached manually because React's wheel
+  // listener is passive and can't prevent page scrolling.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      // Pinch gestures arrive as ctrl+wheel with small deltas; scale them up.
-      const delta = e.deltaY * (e.deltaMode === 1 ? 16 : 1) * (e.ctrlKey ? 4 : 1);
-      zoomAt(Math.exp(-delta * 0.0015), e.clientX - rect.left, e.clientY - rect.top);
+      const lines = e.deltaMode === 1 ? 16 : 1;
+      const dx = e.deltaX * lines;
+      const dy = e.deltaY * lines;
+      // Browsers report a trackpad pinch as ctrl + wheel, with small deltas.
+      const pinch = e.ctrlKey;
+      if (pinch || e.metaKey || isMouseWheel(e)) {
+        const rect = canvas.getBoundingClientRect();
+        zoomAt(Math.exp(-dy * (pinch ? 4 : 1) * 0.0015), e.clientX - rect.left, e.clientY - rect.top);
+        return;
+      }
+      const v = latest.current.view;
+      setView({ ...v, x: v.x - dx, y: v.y - dy });
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", onWheel);
-  }, [zoomAt]);
+  }, [zoomAt, setView]);
 
   /** Painting pixel under a point in the canvas, or null outside the painting. */
   const pixelAt = (cx: number, cy: number) => {
@@ -731,7 +752,11 @@ export function PaintingCanvas({
         </button>
         <button
           type="button"
-          onClick={() => setUserView(null)}
+          onClick={() => {
+            // Gestures right after this should start from the fitted view.
+            latest.current.view = latest.current.fitted;
+            setUserView(null);
+          }}
           disabled={!zoomed}
           className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
         >
