@@ -82,14 +82,14 @@ export function PaintingViewer({ painting, headerRight }: Props) {
                 onTotalColors={setTotalColors}
                 // Clicking the highlighted color again clears the highlight.
                 onPickColor={(color) => setFocus(color === focusColor ? null : color)}
-              />
-            </div>
-            <div className="border-t border-zinc-800 px-6 py-4">
-              <SimplifySlider
-                colors={colors}
-                onChange={setColors}
-                total={totalColors}
-                colorCount={palette?.length ?? null}
+                controls={
+                  <SimplifySlider
+                    colors={colors}
+                    onChange={setColors}
+                    total={totalColors}
+                    colorCount={palette?.length ?? null}
+                  />
+                }
               />
             </div>
           </main>

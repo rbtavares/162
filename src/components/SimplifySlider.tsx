@@ -51,7 +51,7 @@ export function SimplifySlider({ colors, onChange, total, colorCount }: Props) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="w-full">
       <div className="mb-2 flex items-center justify-between text-xs">
         <span className="font-medium text-zinc-300">Realistic</span>
         <label className="flex items-center gap-1.5 text-zinc-500">

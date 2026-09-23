@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PIXELS_PER_BLOCK, paintingSrc, type Painting } from "@/data/paintings";
 import { MIN_COLORS, analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
 import { usePreference } from "@/lib/preferences";
@@ -16,10 +16,15 @@ type Props = {
   onTotalColors?: (total: number) => void;
   /** Called with the displayed color (0xRRGGBB) of a clicked pixel. */
   onPickColor?: (color: number) => void;
+  /** Floating panel at the bottom left, beside the view controls. */
+  controls?: ReactNode;
 };
 
 /** Space (CSS px) left around the painting when it is fitted to the view; room for the pixel numbers. */
 const FIT_GAP = 40;
+/** Extra space kept clear above and below the fitted painting for the floating controls. */
+const FIT_TOP = 28;
+const FIT_BOTTOM = 56;
 /** Below this many CSS px per painting pixel the pixel grid is hidden. */
 const MIN_GRID_CELL = 4;
 /** Zoom limits relative to the fitted size, and absolute max px per pixel. */
@@ -160,11 +165,13 @@ function drawNumbers(
 }
 
 function fitView(width: number, height: number, pw: number, ph: number): View {
+  const top = FIT_GAP + FIT_TOP;
+  const bottom = FIT_GAP + FIT_BOTTOM;
   const scale = Math.max(
     0.1,
-    Math.min((width - FIT_GAP * 2) / pw, (height - FIT_GAP * 2) / ph),
+    Math.min((width - FIT_GAP * 2) / pw, (height - top - bottom) / ph),
   );
-  return { scale, x: (width - pw * scale) / 2, y: (height - ph * scale) / 2 };
+  return { scale, x: (width - pw * scale) / 2, y: top + (height - top - bottom - ph * scale) / 2 };
 }
 
 /** Groups pixel indices by CSS color so each color is filled in one pass. */
@@ -191,6 +198,7 @@ export function PaintingCanvas({
   onPalette,
   onTotalColors,
   onPickColor,
+  controls,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -582,49 +590,56 @@ export function PaintingCanvas({
           dragging ? "cursor-grabbing" : picking ? "cursor-crosshair" : "cursor-grab"
         }`}
       />
-      <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
+      <p className="pointer-events-none absolute left-3 top-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
         Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
       </p>
-      <div className="absolute bottom-3 right-3 flex flex-wrap items-center justify-end gap-2">
-        <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
-          <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
-          <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
-          <Switch
-            label="Blocks"
-            title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
-            checked={showBlocks}
-            onChange={setShowBlocks}
-            disabled={!hasBlocks}
-          />
-        </div>
-        <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
-          <button
-            type="button"
-            onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
-            aria-label="Zoom out"
-            className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-          >
-            −
-          </button>
-          <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
-            {Math.round((view.scale / fitted.scale) * 100)}%
-          </span>
-          <button
-            type="button"
-            onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
-            aria-label="Zoom in"
-            className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={() => setUserView(null)}
-            disabled={!zoomed}
-            className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
-          >
-            Reset
-          </button>
+      <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
+        {controls && (
+          <div className="w-80 max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
+            {controls}
+          </div>
+        )}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
+            <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
+            <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
+            <Switch
+              label="Blocks"
+              title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
+              checked={showBlocks}
+              onChange={setShowBlocks}
+              disabled={!hasBlocks}
+            />
+          </div>
+          <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
+            <button
+              type="button"
+              onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
+              aria-label="Zoom out"
+              className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+            >
+              −
+            </button>
+            <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
+              {Math.round((view.scale / fitted.scale) * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
+              aria-label="Zoom in"
+              className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserView(null)}
+              disabled={!zoomed}
+              className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
+            >
+              Reset
+            </button>
+          </div>
         </div>
       </div>
     </div>
