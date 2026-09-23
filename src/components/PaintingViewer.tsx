@@ -73,7 +73,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
         </main>
       </div>
 
-      <aside className="flight-enter-right flex shrink-0 flex-col border-t border-zinc-800 md:w-64 md:border-l md:border-t-0">
+      <aside className="flight-enter-right flex shrink-0 flex-col border-t border-zinc-800 md:w-56 md:border-l md:border-t-0">
         <ColorPanel palette={palette} focusColor={focusColor} onFocusChange={setFocus} />
       </aside>
     </div>

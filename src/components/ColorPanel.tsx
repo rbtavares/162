@@ -44,7 +44,7 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
         </button>
       </div>
       <ul className="max-h-72 overflow-y-auto p-2 md:max-h-none md:flex-1 md:overscroll-contain">
-        {palette?.map((c, i) => {
+        {palette?.map((c) => {
           const active = c.key === focusColor;
           return (
             <li key={c.key}>
@@ -56,9 +56,6 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
                   active ? "bg-zinc-800 ring-1 ring-inset ring-emerald-400" : "hover:bg-zinc-900"
                 } ${focusColor !== null && !active ? "opacity-60 hover:opacity-100" : ""}`}
               >
-                <span className="w-5 shrink-0 text-right text-xs tabular-nums text-zinc-500">
-                  {i + 1}
-                </span>
                 <span
                   className="size-7 shrink-0 rounded-sm shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)]"
                   style={{ backgroundColor: hex(c.key) }}
