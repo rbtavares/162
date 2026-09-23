@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { PIXELS_PER_BLOCK, paintingSrc, type Painting } from "@/data/paintings";
-import { MIN_COLORS, analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
+import { PIXELS_PER_BLOCK, minColors, paintingSrc, type Painting } from "@/data/paintings";
+import { analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
 import { usePreference } from "@/lib/preferences";
 
 type Props = {
@@ -226,7 +226,7 @@ export function PaintingCanvas({
   const simplified = useMemo(() => {
     if (!analysis) return null;
     const total = analysis.colors.length;
-    const target = colors === null ? total : Math.max(MIN_COLORS, Math.min(total, colors));
+    const target = colors === null ? total : Math.max(minColors(total), Math.min(total, colors));
     return simplifyToColors(analysis, target);
   }, [analysis, colors]);
 

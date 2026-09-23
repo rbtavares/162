@@ -19,6 +19,14 @@ export type Painting = {
 
 export const paintings: Painting[] = data;
 
+/** Fewest colors simplification reduces a painting to; below this they lose their character. */
+const MIN_COLORS = 20;
+
+/** Fewest colors a painting with `total` distinct colors can be simplified to. */
+export function minColors(total: number) {
+  return Math.min(MIN_COLORS, total);
+}
+
 export function paintingSrc(p: Painting) {
   return p.src ?? `/paintings/${p.id}.png`;
 }

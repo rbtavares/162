@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { MIN_COLORS } from "@/lib/simplify";
+import { minColors } from "@/data/paintings";
 
 type Props = {
   /** Target number of colors; null keeps every original color. */
@@ -19,23 +19,25 @@ const STEPS = 1000;
  * Maps slider position (0 = realistic, 1 = simplified) to a color count on a
  * log scale so the slider feels even across its range.
  */
-function positionToColors(position: number, total: number) {
-  const c = Math.exp(Math.log(total) + (Math.log(MIN_COLORS) - Math.log(total)) * position);
-  return Math.max(MIN_COLORS, Math.min(total, Math.round(c)));
+function positionToColors(position: number, total: number, min: number) {
+  const c = Math.exp(Math.log(total) + (Math.log(min) - Math.log(total)) * position);
+  return Math.max(min, Math.min(total, Math.round(c)));
 }
 
-function colorsToPosition(colors: number, total: number) {
-  if (total <= MIN_COLORS) return 0;
-  const c = Math.max(MIN_COLORS, Math.min(total, colors));
-  return (Math.log(total) - Math.log(c)) / (Math.log(total) - Math.log(MIN_COLORS));
+function colorsToPosition(colors: number, total: number, min: number) {
+  if (total <= min) return 0;
+  const c = Math.max(min, Math.min(total, colors));
+  return (Math.log(total) - Math.log(c)) / (Math.log(total) - Math.log(min));
 }
 
 export function SimplifySlider({ colors, onChange, total, colorCount }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
+  const min = total === null ? null : minColors(total);
   const cancelled = useRef(false);
 
-  const position = total === null || colors === null ? 0 : colorsToPosition(colors, total);
-  const disabled = total === null || total <= MIN_COLORS;
+  const position =
+    total === null || min === null || colors === null ? 0 : colorsToPosition(colors, total, min);
+  const disabled = total === null || min === null || total <= min;
 
   const commit = () => {
     if (draft === null) return;
@@ -45,8 +47,8 @@ export function SimplifySlider({ colors, onChange, total, colorCount }: Props) {
       return;
     }
     const n = Number.parseInt(draft, 10);
-    if (!Number.isFinite(n) || total === null) return;
-    const clamped = Math.max(MIN_COLORS, Math.min(total, n));
+    if (!Number.isFinite(n) || total === null || min === null) return;
+    const clamped = Math.max(min, Math.min(total, n));
     onChange(clamped >= total ? null : clamped);
   };
 
@@ -58,8 +60,8 @@ export function SimplifySlider({ colors, onChange, total, colorCount }: Props) {
           <input
             type="text"
             inputMode="numeric"
-            aria-label={`Number of colors (${MIN_COLORS} to ${total ?? "…"})`}
-            title={`${MIN_COLORS}–${total ?? "…"}`}
+            aria-label={`Number of colors (${min ?? "…"} to ${total ?? "…"})`}
+            title={`${min ?? "…"}–${total ?? "…"}`}
             disabled={total === null}
             value={draft ?? (colorCount === null ? "" : String(colorCount))}
             placeholder="…"
@@ -92,9 +94,9 @@ export function SimplifySlider({ colors, onChange, total, colorCount }: Props) {
         value={Math.round(position * STEPS)}
         disabled={disabled}
         onChange={(e) => {
-          if (total === null) return;
+          if (total === null || min === null) return;
           const p = Number(e.target.value) / STEPS;
-          onChange(p === 0 ? null : positionToColors(p, total));
+          onChange(p === 0 ? null : positionToColors(p, total, min));
         }}
         aria-label="Simplification level"
         className="h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-800 accent-emerald-400 disabled:cursor-default disabled:opacity-50"
