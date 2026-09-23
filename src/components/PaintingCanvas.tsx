@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { PIXELS_PER_BLOCK, minColors, paintingSrc, type Painting } from "@/data/paintings";
 import { analyzeImage, simplify, type PaletteColor, type SimplifyMethod } from "@/lib/simplify";
 import { usePreference } from "@/lib/preferences";
@@ -45,6 +53,9 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 16;
 const MAX_CELL = 96;
 const BUTTON_ZOOM = 1.5;
+/** Whether the Blocks switch showed on the last painting page (see blocksSwitchShown). */
+let lastBlocksSwitchShown = false;
+
 /** How far (CSS px) a pointer can move and still count as a click. */
 const CLICK_SLOP = 5;
 
@@ -242,6 +253,16 @@ export function PaintingCanvas({
   const [showBlocks, setShowBlocks] = usePreference("block-edges", true);
   const [showNumbers, setShowNumbers] = usePreference("pixel-numbers", true);
   const hasBlocks = painting.width > 1 || painting.height > 1;
+  // Each painting page gets fresh controls, so the Blocks switch starts as it
+  // was on the page before and then slides to how this painting needs it.
+  const [blocksSwitchShown, setBlocksSwitchShown] = useState(() => lastBlocksSwitchShown);
+  useEffect(() => {
+    lastBlocksSwitchShown = hasBlocks;
+    if (blocksSwitchShown === hasBlocks) return;
+    // A frame later, so the starting state is on screen for the transition.
+    const frame = requestAnimationFrame(() => setBlocksSwitchShown(hasBlocks));
+    return () => cancelAnimationFrame(frame);
+  }, [hasBlocks, blocksSwitchShown]);
 
   // Arriving from the gallery, the canvas is hidden while the painting flies in
   // (see paintingFlight). Counting and sorting the colors can block the page
@@ -444,17 +465,22 @@ export function PaintingCanvas({
   };
 
   /*
-   * With a mouse or pen, clicking the painting picks a color and dragging it
-   * does nothing, so a click that wobbles doesn't nudge the view. Dragging
-   * pans off the painting, or anywhere with Cmd/Ctrl held. Touch has no
-   * modifier keys, so there a tap picks and a drag always pans. Two fingers
-   * pinch-zoom.
+   * With a mouse or pen, clicking the painting picks a color, and dragging
+   * pans only with Cmd/Ctrl held, anywhere; a plain drag does nothing, so a
+   * click that wobbles doesn't nudge the view. Touch has no modifier keys, so
+   * there a tap picks and a drag pans. Two fingers pinch-zoom.
    */
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef<{ pick: boolean; x: number; y: number; moved: boolean } | null>(null);
+  const gesture = useRef<{
+    pick: boolean;
+    pan: boolean;
+    x: number;
+    y: number;
+    moved: boolean;
+  } | null>(null);
   const [dragging, setDragging] = useState(false);
-  // Whether the mouse would pick a color where it is, for the cursor.
-  const [picking, setPicking] = useState(false);
+  // What a mouse press would do where the pointer is, for the cursor.
+  const [hoverMode, setHoverMode] = useState<"pick" | "pan" | "none">("none");
   const hoverAt = useRef<{ x: number; y: number } | null>(null);
 
   const localPoint = (e: { clientX: number; clientY: number }) => {
@@ -464,7 +490,9 @@ export function PaintingCanvas({
 
   const updatePicking = (point: { x: number; y: number } | null, panKey: boolean) => {
     hoverAt.current = point;
-    setPicking(point !== null && !panKey && pixelAt(point.x, point.y) !== null);
+    setHoverMode(
+      point === null ? "none" : panKey ? "pan" : pixelAt(point.x, point.y) !== null ? "pick" : "none",
+    );
   };
 
   // Pressing or releasing Cmd/Ctrl changes the cursor without the mouse moving.
@@ -490,18 +518,17 @@ export function PaintingCanvas({
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size > 1) {
       // A second finger turns the gesture into a pinch.
-      if (gesture.current) gesture.current = { ...gesture.current, pick: false, moved: true };
+      if (gesture.current) gesture.current = { ...gesture.current, pick: false, pan: true, moved: true };
       setDragging(true);
       return;
     }
     const point = localPoint(e);
-    const pick =
-      e.pointerType !== "touch" &&
-      e.button === 0 &&
-      !(e.metaKey || e.ctrlKey) &&
-      pixelAt(point.x, point.y) !== null;
-    gesture.current = { pick, ...point, moved: false };
-    if (!pick) setDragging(true);
+    const touch = e.pointerType === "touch";
+    const panKey = e.metaKey || e.ctrlKey;
+    const pick = !touch && e.button === 0 && !panKey && pixelAt(point.x, point.y) !== null;
+    const pan = touch || panKey;
+    gesture.current = { pick, pan, ...point, moved: false };
+    if (pan) setDragging(true);
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -516,7 +543,7 @@ export function PaintingCanvas({
       const p = localPoint(e);
       g.moved = Math.hypot(p.x - g.x, p.y - g.y) > CLICK_SLOP;
     }
-    if (g?.pick) return;
+    if (g && !g.pan) return;
     const others = [...pts].filter(([id]) => id !== e.pointerId).map(([, p]) => p);
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const v = latest.current.view;
@@ -662,7 +689,7 @@ export function PaintingCanvas({
       const on = (x: number, y: number) =>
         x >= 0 && y >= 0 && x < pw && y < ph && mask[y * pw + x] === 1;
       ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.strokeStyle = "#fff";
       ctx.beginPath();
       for (let y = 0; y < ph; y++) {
         for (let x = 0; x < pw; x++) {
@@ -720,7 +747,13 @@ export function PaintingCanvas({
           if (e.pointerType !== "touch" && !pointers.current.size) updatePicking(null, false);
         }}
         className={`absolute inset-0 h-full w-full touch-none select-none ${
-          dragging ? "cursor-grabbing" : picking ? "cursor-crosshair" : "cursor-grab"
+          dragging
+            ? "cursor-grabbing"
+            : hoverMode === "pick"
+              ? "cursor-crosshair"
+              : hoverMode === "pan"
+                ? "cursor-grab"
+                : "cursor-default"
         } ${covered ? "opacity-0" : ""}`}
       />
       <canvas
@@ -730,9 +763,7 @@ export function PaintingCanvas({
           covered ? "opacity-0" : ""
         }`}
       />
-      <p className="flight-enter-top pointer-events-none absolute left-3 top-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
-        Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
-      </p>
+      <ControlsHint />
       <div className="flight-enter-top absolute right-3 top-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
         <button
           type="button"
@@ -775,13 +806,18 @@ export function PaintingCanvas({
         <div className="ml-auto flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
           <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
           <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
-          <Switch
-            label="Blocks"
-            title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
-            checked={showBlocks}
-            onChange={setShowBlocks}
-            disabled={!hasBlocks}
-          />
+          {/* A single-block painting has no block edges to show: the switch
+              slides away (its column shrinks to nothing) and back. */}
+          <div
+            inert={!blocksSwitchShown}
+            className={`grid transition-[grid-template-columns,opacity] duration-300 ease-out motion-reduce:transition-none ${
+              blocksSwitchShown ? "grid-cols-[1fr] opacity-100" : "grid-cols-[0fr] opacity-0"
+            }`}
+          >
+            <div className="min-w-0 overflow-hidden">
+              <Switch label="Blocks" title="Block edges" checked={showBlocks} onChange={setShowBlocks} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -793,37 +829,62 @@ function Switch({
   title,
   checked,
   onChange,
-  disabled = false,
 }: {
   label: string;
   title: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-  disabled?: boolean;
 }) {
-  const on = checked && !disabled;
   return (
     <button
       type="button"
       role="switch"
-      aria-checked={on}
+      aria-checked={checked}
       aria-label={title}
       title={title}
-      disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex h-8 items-center gap-2 px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-400 disabled:pointer-events-none disabled:text-zinc-600"
+      className="flex h-8 items-center gap-2 whitespace-nowrap px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-400"
     >
       <span
         aria-hidden
-        className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-emerald-500" : "bg-zinc-700"}`}
+        className={`relative h-3.5 w-6 rounded-full transition-colors ${checked ? "bg-emerald-500" : "bg-zinc-700"}`}
       >
         <span
           className={`absolute top-0.5 size-2.5 rounded-full bg-white shadow transition-[left] ${
-            on ? "left-3" : "left-0.5"
+            checked ? "left-3" : "left-0.5"
           }`}
         />
       </span>
       {label}
     </button>
+  );
+}
+
+/** The modifier key for panning and zooming: ⌘ on Apple devices, Ctrl elsewhere. */
+function useModifierKey() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"),
+    // Before the platform is known (on the server), either will do.
+    () => "⌘/Ctrl",
+  );
+}
+
+/** How to use the canvas with a mouse or trackpad, at its top left. */
+function ControlsHint() {
+  const mod = useModifierKey();
+  const key = "rounded-sm border border-zinc-700 bg-zinc-800 px-1 py-px font-sans text-[10px] text-zinc-300";
+  return (
+    <p className="flight-enter-top pointer-events-none absolute left-3 top-3 hidden items-center gap-3 rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:flex">
+      <span className="flex items-center gap-1.5">
+        <kbd className={key}>Click</kbd> highlight a color
+      </span>
+      <span className="flex items-center gap-1.5">
+        <kbd className={key}>{mod}</kbd>+<kbd className={key}>Drag</kbd> pan
+      </span>
+      <span className="flex items-center gap-1.5">
+        <kbd className={key}>{mod}</kbd>+<kbd className={key}>Scroll</kbd> zoom
+      </span>
+    </p>
   );
 }
