@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PIXELS_PER_BLOCK, paintingSrc, type Painting } from "@/data/paintings";
 import { MIN_COLORS, analyzeImage, simplifyToColors, type PaletteColor } from "@/lib/simplify";
+import { usePreference } from "@/lib/preferences";
 
 type Props = {
   painting: Painting;
@@ -127,6 +128,9 @@ export function PaintingCanvas({
 
   const src = paintingSrc(painting);
   const pixels = usePaintingPixels(src);
+  const [showGrid, setShowGrid] = usePreference("pixel-grid", true);
+  const [showBlocks, setShowBlocks] = usePreference("block-edges", true);
+  const hasBlocks = painting.width > 1 || painting.height > 1;
 
   const analysis = useMemo(() => (pixels ? analyzeImage(pixels) : null), [pixels]);
 
@@ -390,8 +394,8 @@ export function PaintingCanvas({
       }
     }
 
-    // Pixel grid, hidden when zoomed out too far to be useful.
-    if (view.scale >= MIN_GRID_CELL) {
+    // Pixel grid, also hidden when zoomed out too far to be useful.
+    if (showGrid && view.scale >= MIN_GRID_CELL) {
       ctx.lineWidth = 1;
       ctx.strokeStyle = "rgba(0,0,0,0.35)";
       ctx.beginPath();
@@ -407,7 +411,7 @@ export function PaintingCanvas({
     }
 
     // Block boundaries
-    if (painting.width > 1 || painting.height > 1) {
+    if (showBlocks && hasBlocks) {
       ctx.lineWidth = 2;
       ctx.strokeStyle = "rgba(255,255,255,0.5)";
       ctx.beginPath();
@@ -458,7 +462,7 @@ export function PaintingCanvas({
       }
       ctx.stroke();
     }
-  }, [painting, pw, ph, size, view, display]);
+  }, [painting, pw, ph, size, view, display, showGrid, showBlocks, hasBlocks]);
 
   const center = () => [size.width / 2, size.height / 2] as const;
 
@@ -482,35 +486,87 @@ export function PaintingCanvas({
       <p className="pointer-events-none absolute bottom-3 left-3 hidden rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:block">
         Click a pixel to highlight its color · <kbd className="font-sans">⌘/Ctrl</kbd>-drag to pan
       </p>
-      <div className="absolute bottom-3 right-3 flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
-        <button
-          type="button"
-          onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
-          aria-label="Zoom out"
-          className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-        >
-          −
-        </button>
-        <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
-          {Math.round((view.scale / fitted.scale) * 100)}%
-        </span>
-        <button
-          type="button"
-          onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
-          aria-label="Zoom in"
-          className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
-        >
-          +
-        </button>
-        <button
-          type="button"
-          onClick={() => setUserView(null)}
-          disabled={!zoomed}
-          className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
-        >
-          Reset
-        </button>
+      <div className="absolute bottom-3 right-3 flex flex-wrap items-center justify-end gap-2">
+        <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
+          <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
+          <Switch
+            label="Blocks"
+            title={hasBlocks ? "Block edges" : "Block edges (this painting is a single block)"}
+            checked={showBlocks}
+            onChange={setShowBlocks}
+            disabled={!hasBlocks}
+          />
+        </div>
+        <div className="flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 text-sm text-zinc-300 shadow-lg backdrop-blur">
+          <button
+            type="button"
+            onClick={() => zoomAt(1 / BUTTON_ZOOM, ...center())}
+            aria-label="Zoom out"
+            className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+          >
+            −
+          </button>
+          <span className="w-12 text-center text-xs tabular-nums text-zinc-500">
+            {Math.round((view.scale / fitted.scale) * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => zoomAt(BUTTON_ZOOM, ...center())}
+            aria-label="Zoom in"
+            className="size-8 transition-colors hover:bg-zinc-800 hover:text-white"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserView(null)}
+            disabled={!zoomed}
+            className="h-8 border-l border-zinc-800 px-3 text-xs font-medium transition-colors hover:bg-zinc-800 hover:text-white disabled:pointer-events-none disabled:text-zinc-600"
+          >
+            Reset
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+function Switch({
+  label,
+  title,
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  title: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  const on = checked && !disabled;
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={title}
+      title={title}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className="flex h-8 items-center gap-2 px-2.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-emerald-400 disabled:pointer-events-none disabled:text-zinc-600"
+    >
+      <span
+        aria-hidden
+        className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-emerald-500" : "bg-zinc-700"}`}
+      >
+        <span
+          className={`absolute top-0.5 size-2.5 rounded-full bg-white shadow transition-[left] ${
+            on ? "left-3" : "left-0.5"
+          }`}
+        />
+      </span>
+      {label}
+    </button>
   );
 }
