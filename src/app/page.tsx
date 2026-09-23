@@ -27,11 +27,16 @@ export default function GalleryPage() {
         </p>
       </header>
 
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] gap-px border-y border-zinc-800 bg-zinc-800">
-        <CustomPaintingCard />
+      {/* Cards are at least 360px (or the full width on narrow screens), and at
+          least a fifth of the row, so there are never more than 5 per row. The
+          fifth leaves a pixel of slack so rounding can't drop the row to 4. The
+          lines between cards come from the cards (see PaintingCard), so empty
+          spots in the last row show the page. */}
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(max(min(100%,360px),calc((100%_-_5px)/5)),1fr))] gap-px border-y border-zinc-800">
         {sorted.map((p) => (
           <PaintingCard key={p.id} painting={p} href={`/painting/${p.id}`} />
         ))}
+        <CustomPaintingCard />
       </ul>
     </div>
   );

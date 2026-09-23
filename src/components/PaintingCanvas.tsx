@@ -74,7 +74,7 @@ function usePaintingPixels(src: string) {
 }
 
 /** Background the dimmed pixels fade toward (matches --background). */
-const DIM_BG: [number, number, number] = [16, 16, 18];
+const DIM_BG: [number, number, number] = [9, 9, 11];
 const DIM_AMOUNT = 0.85;
 
 /**
@@ -109,7 +109,7 @@ const NUMBER_COLOR = "rgba(161,161,170,0.9)";
 const NUMBER_LIT = "rgba(255,255,255,1)";
 const NUMBER_DIM = "rgba(113,113,122,0.3)";
 /** Band behind the numbers once they stick to the view's edge over the painting. */
-const NUMBER_BAND = "rgba(16,16,18,0.85)";
+const NUMBER_BAND = "rgba(9,9,11,0.85)";
 
 let numberFont: string | null = null;
 

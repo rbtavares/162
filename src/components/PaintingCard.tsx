@@ -22,14 +22,18 @@ export function PaintingCard({
   flies = true,
 }: Props) {
   return (
-    <li className="bg-zinc-950">
+    // The 1px outline fills the grid's 1px gaps, drawing the lines between cards.
+    <li className="shadow-[0_0_0_1px_var(--color-zinc-800)]">
+      {/* Equal padding on opposite sides keeps the painting centered in the
+          cell; the bottom's 64px also leaves room for the title over it. */}
       <Link
         href={href}
-        className="group relative flex aspect-square [container-type:size] items-center justify-center px-8 pb-16 pt-8 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400 md:px-10 md:pt-10"
+        className="group relative flex aspect-square [container-type:size] items-center justify-center px-12 py-16 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400 md:px-16"
       >
         <PaintingModel painting={p} side="min(100cqw, 100cqh)" flies={flies} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-3">
-          <div className="flex items-baseline justify-between gap-3">
+          {/* The size lines up with the last line (the subtitle), at the bottom right. */}
+          <div className="flex items-baseline-last justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-sm font-medium text-zinc-100 group-hover:text-emerald-200">
                 {p.title}
