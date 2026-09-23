@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { paintings } from "@/data/paintings";
-import { PaintingModel } from "@/components/PaintingModel";
-import { PlusIcon } from "@/components/icons";
+import { PaintingCard } from "@/components/PaintingCard";
+import { CustomPaintingCard } from "@/components/CustomPaintingCard";
 
 const sorted = [...paintings].sort(
   (a, b) =>
@@ -23,46 +22,9 @@ export default function GalleryPage() {
       </header>
 
       <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))] gap-px border-y border-zinc-800 bg-zinc-800">
-        <li className="bg-zinc-950">
-          <Link
-            href="/custom"
-            className="group relative flex aspect-square flex-col items-center justify-center gap-4 px-8 text-center outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400"
-          >
-            <span className="flex size-16 items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 text-zinc-400 transition-colors group-hover:border-emerald-400 group-hover:text-emerald-300">
-              <PlusIcon className="size-6" />
-            </span>
-            <span>
-              <span className="block text-sm font-medium text-zinc-100 group-hover:text-emerald-200">
-                Custom painting
-              </span>
-              <span className="block text-xs text-zinc-500">
-                Upload a picture and choose its size in blocks
-              </span>
-            </span>
-          </Link>
-        </li>
+        <CustomPaintingCard />
         {sorted.map((p) => (
-          <li key={p.id} className="bg-zinc-950">
-            <Link
-              href={`/painting/${p.id}`}
-              className="group relative flex aspect-square [container-type:size] items-center justify-center px-8 pb-16 pt-8 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400 md:px-10 md:pt-10"
-            >
-              <PaintingModel painting={p} side="min(100cqw, 100cqh)" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate text-sm font-medium text-zinc-100 group-hover:text-emerald-200">
-                      {p.title}
-                    </h2>
-                    {p.author && <p className="truncate text-xs text-zinc-500">{p.author}</p>}
-                  </div>
-                  <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                    {p.width}×{p.height}
-                  </span>
-                </div>
-              </div>
-            </Link>
-          </li>
+          <PaintingCard key={p.id} painting={p} href={`/painting/${p.id}`} />
         ))}
       </ul>
     </div>

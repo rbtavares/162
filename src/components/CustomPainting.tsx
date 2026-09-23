@@ -1,102 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { CUSTOM_ID, PIXELS_PER_BLOCK, type Painting } from "@/data/paintings";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { PIXELS_PER_BLOCK } from "@/data/paintings";
 import {
   CUSTOM_MAX_BLOCKS,
   DEFAULT_CROP,
   DEFAULT_FRAME,
-  MAX_CROP_ZOOM,
   FRAMES,
   findFrame,
   loadImage,
   pictureSize,
   prepareSource,
-  renderPainting,
   suggestSize,
   type Crop,
 } from "@/lib/customPainting";
+import {
+  customPainting,
+  readCustom,
+  useCustom,
+  useCustomImage,
+  writeCustom,
+  type Custom,
+} from "@/lib/customStore";
 import { CropEditor } from "@/components/CropEditor";
 import { PaintingViewer } from "@/components/PaintingViewer";
-
-type Custom = {
-  name: string;
-  /** The uploaded picture, downscaled, as a PNG data URL. */
-  source: string;
-  width: number;
-  height: number;
-  /** Id of one of FRAMES. */
-  frame: string;
-  /** Which part of the picture fills the painting. */
-  crop: Crop;
-};
-
-/*
- * The custom painting lives in memory and, when it fits, in localStorage so it
- * survives reloads. Storage can be full or blocked; the page works without it.
- */
-const STORAGE_KEY = "custom-painting";
-const listeners = new Set<() => void>();
-/** Serialized Custom, null when there is none, undefined until read. */
-let stored: string | null | undefined;
-
-// Follow changes made in other tabs.
-function onStorage(e: StorageEvent) {
-  if (e.key !== STORAGE_KEY && e.key !== null) return;
-  stored = e.newValue;
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  if (listeners.size === 0) window.addEventListener("storage", onStorage);
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) window.removeEventListener("storage", onStorage);
-  };
-}
-
-function getSnapshot() {
-  if (stored === undefined) {
-    try {
-      stored = localStorage.getItem(STORAGE_KEY);
-    } catch {
-      stored = null;
-    }
-  }
-  return stored;
-}
-
-function writeCustom(custom: Custom) {
-  stored = JSON.stringify(custom);
-  try {
-    localStorage.setItem(STORAGE_KEY, stored);
-  } catch {
-    // Too big or blocked; keep it for this visit only.
-  }
-  listeners.forEach((l) => l());
-}
-
-function parseCustom(raw: string | null): Custom | null {
-  if (!raw) return null;
-  try {
-    const c = JSON.parse(raw);
-    const blocks = (n: unknown) => Number.isInteger(n) && (n as number) >= 1 && (n as number) <= CUSTOM_MAX_BLOCKS;
-    if (typeof c?.name === "string" && typeof c.source === "string" && blocks(c.width) && blocks(c.height)) {
-      // Fill in settings saved before they existed, and drop broken ones.
-      const inRange = (n: unknown, lo: number, hi: number) =>
-        typeof n === "number" && n >= lo && n <= hi;
-      const crop =
-        inRange(c.crop?.x, 0, 1) && inRange(c.crop?.y, 0, 1) && inRange(c.crop?.zoom, 1, MAX_CROP_ZOOM)
-          ? { x: c.crop.x, y: c.crop.y, zoom: c.crop.zoom }
-          : DEFAULT_CROP;
-      const frame = typeof c.frame === "string" ? findFrame(c.frame).id : DEFAULT_FRAME;
-      return { ...c, frame, crop };
-    }
-  } catch {}
-  return null;
-}
 
 const READ_ERROR = "Couldn't read that picture. Try a PNG, JPEG, WebP or GIF.";
 
@@ -117,7 +45,7 @@ function useUpload() {
       const img = await loadImage(source);
       // Read now rather than when the upload started, so a size or frame
       // changed while it loaded isn't overwritten.
-      const current = parseCustom(getSnapshot() ?? null);
+      const current = readCustom();
       writeCustom({
         name: file.name.replace(/\.[^.]*$/, "") || "Custom painting",
         source,
@@ -138,26 +66,11 @@ function useUpload() {
 }
 
 export function CustomPainting() {
-  const raw = useSyncExternalStore(subscribe, getSnapshot, () => undefined);
-  const custom = useMemo(() => (raw === undefined ? null : parseCustom(raw)), [raw]);
+  const saved = useCustom();
+  const custom = saved ?? null;
   const { busy, error, upload } = useUpload();
-
   // The decoded picture, re-rendered at the chosen size.
-  const [image, setImage] = useState<{ source: string; img: HTMLImageElement } | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const source = custom?.source;
-  useEffect(() => {
-    if (!source) return;
-    let cancelled = false;
-    loadImage(source).then(
-      (img) => !cancelled && setImage({ source, img }),
-      () => !cancelled && setLoadError(source),
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [source]);
-  const img = image && image.source === source ? image.img : null;
+  const { img, failed } = useCustomImage(custom?.source);
 
   // While the picture is being moved, the crop lives here and is saved once
   // the user pauses, rather than writing the whole picture to storage per move.
@@ -168,7 +81,7 @@ export function CustomPainting() {
   const saveCrop = useCallback(() => {
     clearTimeout(saveTimer.current);
     const draft = draftRef.current;
-    const current = parseCustom(getSnapshot() ?? null);
+    const current = readCustom();
     if (draft && current) writeCustom({ ...current, crop: draft });
     draftRef.current = null;
     setDraftCrop(null);
@@ -189,22 +102,15 @@ export function CustomPainting() {
   // Rendering big paintings takes a moment; let dragging stay smooth.
   const renderCrop = useDeferredValue(crop);
 
-  const painting = useMemo<Painting | null>(() => {
-    if (!custom || !img) return null;
-    return {
-      id: CUSTOM_ID,
-      title: custom.name,
-      author: "",
-      width: custom.width,
-      height: custom.height,
-      src: renderPainting(img, custom.width, custom.height, custom.frame, renderCrop),
-    };
-  }, [custom, img, renderCrop]);
+  const painting = useMemo(
+    () => (custom && img ? customPainting(img, custom, renderCrop) : null),
+    [custom, img, renderCrop],
+  );
 
   // Server render and first paint, before storage has been read.
-  if (raw === undefined) return <div className="min-h-dvh" />;
+  if (saved === undefined) return <div className="min-h-dvh" />;
 
-  if (!custom || loadError === custom.source) {
+  if (!custom || failed) {
     return <UploadScreen busy={busy} error={error ?? (custom ? READ_ERROR : null)} onFile={upload} />;
   }
 
