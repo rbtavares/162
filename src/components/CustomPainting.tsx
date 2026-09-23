@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { PIXELS_PER_BLOCK } from "@/data/paintings";
 import {
@@ -108,13 +107,13 @@ export function CustomPainting() {
   );
 
   // Server render and first paint, before storage has been read.
-  if (saved === undefined) return <div className="min-h-dvh" />;
+  if (saved === undefined) return <div className="flex-1" />;
 
   if (!custom || failed) {
     return <UploadScreen busy={busy} error={error ?? (custom ? READ_ERROR : null)} onFile={upload} />;
   }
 
-  if (!painting) return <div className="min-h-dvh" />;
+  if (!painting) return <div className="flex-1" />;
 
   const change = (settings: Partial<Pick<Custom, "width" | "height" | "frame">>) =>
     writeCustom({ ...custom, ...settings });
@@ -272,59 +271,49 @@ function UploadScreen({
   const [dragging, setDragging] = useState(false);
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="flex h-16 shrink-0 items-center gap-3 border-b border-zinc-800 px-4">
-        <Link
-          href="/"
-          className="text-sm font-semibold tracking-tight text-zinc-100 transition-colors hover:text-emerald-300"
-        >
-          Minecraft Painting Guide
-        </Link>
-      </header>
-      <main className="flex flex-1 items-center justify-center p-4 md:p-8">
-        <label
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
+    <main className="flex flex-1 items-center justify-center p-4 md:p-8">
+      <label
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          onFile(e.dataTransfer.files[0]);
+        }}
+        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-within:border-emerald-400 ${
+          dragging
+            ? "border-emerald-400 bg-emerald-500/10"
+            : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50"
+        }`}
+      >
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Make a custom painting</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Drop a picture here. You pick the size in blocks, at 16 pixels per block.
+          </p>
+        </div>
+        <span className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
+          {busy ? "Loading…" : "Choose a picture"}
+        </span>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          className="sr-only"
+          onChange={(e) => {
+            onFile(e.target.files?.[0]);
+            e.target.value = "";
           }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            onFile(e.dataTransfer.files[0]);
-          }}
-          className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-within:border-emerald-400 ${
-            dragging
-              ? "border-emerald-400 bg-emerald-500/10"
-              : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50"
-          }`}
-        >
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Make a custom painting</h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              Drop a picture here. You pick the size in blocks, at 16 pixels per block.
-            </p>
-          </div>
-          <span className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950">
-            {busy ? "Loading…" : "Choose a picture"}
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            disabled={busy}
-            className="sr-only"
-            onChange={(e) => {
-              onFile(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-          {error && (
-            <p role="alert" className="text-sm text-red-400">
-              {error}
-            </p>
-          )}
-        </label>
-      </main>
-    </div>
+        />
+        {error && (
+          <p role="alert" className="text-sm text-red-400">
+            {error}
+          </p>
+        )}
+      </label>
+    </main>
   );
 }

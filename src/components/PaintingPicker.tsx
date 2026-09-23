@@ -7,6 +7,8 @@ import { useCustomPainting } from "@/lib/customStore";
 
 type Props = {
   selectedId: string;
+  /** Thumbnails only (names show on hover), for the collapsed sidebar. */
+  compact?: boolean;
 };
 
 const sizeKey = (p: Painting) => `${p.width}×${p.height}`;
@@ -23,14 +25,18 @@ const sortedGroups = [...groups.entries()].sort(([a], [b]) => {
   return aw * ah - bw * bh || aw - bw;
 });
 
-export function PaintingPicker({ selectedId }: Props) {
+export function PaintingPicker({ selectedId, compact = false }: Props) {
   const custom = useCustomPainting();
+  // Compact items are squares hugging the thumbnail, so the selection outline frames it evenly.
+  const item = compact ? "mx-auto size-11 shrink-0 justify-center" : "w-full gap-3 px-2 py-1.5";
+  const label = compact ? "sr-only" : "min-w-0";
   return (
-    <nav aria-label="Paintings" className="flex flex-col gap-5">
+    <nav aria-label="Paintings" className={`flex flex-col ${compact ? "gap-3" : "gap-5"}`}>
       <Link
         href="/custom"
         aria-current={selectedId === CUSTOM_ID ? "page" : undefined}
-        className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors ${
+        title={compact ? (custom?.title ?? "Custom painting") : undefined}
+        className={`flex items-center rounded-md text-left transition-colors ${item} ${
           selectedId === CUSTOM_ID
             ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"
             : "text-zinc-300 hover:bg-zinc-800"
@@ -52,7 +58,7 @@ export function PaintingPicker({ selectedId }: Props) {
             <PlusIcon className="size-4" />
           </span>
         )}
-        <span className="min-w-0">
+        <span className={label}>
           <span className="block truncate text-sm font-medium">{custom?.title ?? "Custom painting"}</span>
           <span className="block truncate text-xs text-zinc-500">
             {custom ? `Custom painting · ${custom.width}×${custom.height}` : "From your own picture"}
@@ -60,8 +66,14 @@ export function PaintingPicker({ selectedId }: Props) {
         </span>
       </Link>
       {sortedGroups.map(([size, items]) => (
-        <section key={size}>
-          <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+        <section key={size} className={compact ? "border-t border-zinc-800 pt-3" : undefined}>
+          <h2
+            className={
+              compact
+                ? "sr-only"
+                : "mb-2 px-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500"
+            }
+          >
             {size} blocks
           </h2>
           <ul className="flex flex-col gap-0.5">
@@ -72,7 +84,8 @@ export function PaintingPicker({ selectedId }: Props) {
                   <Link
                     href={`/painting/${p.id}`}
                     aria-current={active ? "page" : undefined}
-                    className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors ${
+                    title={compact ? p.title : undefined}
+                    className={`flex items-center rounded-md text-left transition-colors ${item} ${
                       active
                         ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/40"
                         : "text-zinc-300 hover:bg-zinc-800"
@@ -88,7 +101,7 @@ export function PaintingPicker({ selectedId }: Props) {
                         className="max-h-8 max-w-8 object-contain [image-rendering:pixelated]"
                       />
                     </span>
-                    <span className="min-w-0">
+                    <span className={label}>
                       <span className="block truncate text-sm font-medium">{p.title}</span>
                       {p.author && (
                         <span className="block truncate text-xs text-zinc-500">{p.author}</span>

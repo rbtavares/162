@@ -8,7 +8,8 @@ import { useCallback, useSyncExternalStore } from "react";
  */
 const PREFIX = "pref:";
 const listeners = new Set<() => void>();
-const memory = new Map<string, boolean>();
+/** Remembered values; null when the user hasn't chosen yet. */
+const memory = new Map<string, boolean | null>();
 
 // Follow changes made in other tabs.
 function onStorage(e: StorageEvent) {
@@ -27,9 +28,9 @@ function subscribe(listener: () => void) {
   };
 }
 
-function read(key: string, fallback: boolean) {
+function read(key: string) {
   if (!memory.has(key)) {
-    let value = fallback;
+    let value: boolean | null = null;
     try {
       const raw = localStorage.getItem(PREFIX + key);
       if (raw === "1" || raw === "0") value = raw === "1";
@@ -39,11 +40,14 @@ function read(key: string, fallback: boolean) {
   return memory.get(key)!;
 }
 
-/** A remembered on/off preference; `fallback` until the browser has been read. */
-export function usePreference(key: string, fallback: boolean) {
-  const value = useSyncExternalStore(
+/**
+ * A remembered on/off preference, or `fallback` when the user hasn't chosen
+ * (and on the server). Pass null to tell "not chosen" apart from a choice.
+ */
+export function usePreference<F extends boolean | null>(key: string, fallback: F) {
+  const value = useSyncExternalStore<boolean | F>(
     subscribe,
-    () => read(key, fallback),
+    () => read(key) ?? fallback,
     () => fallback,
   );
   const set = useCallback(
