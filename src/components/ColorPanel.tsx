@@ -28,7 +28,8 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3">
+      {/* As tall as the page headers beside it, so their bottom borders line up. */}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-800 px-4 py-3 md:h-16 md:py-0">
         <h3 className="text-sm font-semibold">
           Colors
           {palette && <span className="ml-1.5 font-normal text-zinc-500">{palette.length}</span>}
