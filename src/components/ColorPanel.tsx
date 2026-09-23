@@ -115,12 +115,11 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
           )}
         </div>
       </div>
-      {/* Scrolls with the overlay scrollbar (see OverlayScrollbar) instead of
-          the system's, which can take room and stay on screen. */}
+      {/* Scrolls with the site's overlay scrollbar (see OverlayScrollbar). */}
       <div className="relative flex min-h-0 max-h-72 flex-col overflow-hidden md:max-h-none md:flex-1">
         <div
           ref={listRef}
-          className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] md:overscroll-contain [&::-webkit-scrollbar]:hidden"
+          className="min-h-0 flex-1 overflow-y-auto md:overscroll-contain"
         >
           {/* Just the colors, as squares; the selected one's details show above. */}
           <ul className="grid grid-cols-3 gap-2 p-2">

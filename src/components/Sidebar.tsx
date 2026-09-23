@@ -141,8 +141,7 @@ export function Sidebar() {
             id="painting-list"
             // `relative` keeps the collapsed list's screen-reader-only labels (which
             // are absolutely positioned) inside it; otherwise they stretch the page.
-            // Its own scrollbar is hidden in favour of the overlay one below.
-            className="relative min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] md:overscroll-contain [&::-webkit-scrollbar]:hidden"
+            className="relative min-h-0 flex-1 overflow-y-auto md:overscroll-contain"
           >
             <div className="p-2">
               <PaintingPicker selectedId={selectedId} compact={compact} />

@@ -29,6 +29,15 @@ html {
   color-scheme: dark;
 }
 
+/* Native scrollbars are hidden everywhere: the page and every scrolling area
+   use OverlayScrollbar instead, which only shows while scrolling. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE_DESCRIPTION, SITE_NAME, TITLE_SEPARATOR } from "@/data/site";
 import { FlightOverlay } from "@/components/FlightOverlay";
+import { OverlayScrollbar } from "@/components/OverlayScrollbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +30,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         {children}
+        {/* The page's own scrollbar (the gallery, and phone layouts). */}
+        <OverlayScrollbar />
         <FlightOverlay />
       </body>
     </html>

@@ -10,19 +10,25 @@ const INSET = 2;
 const LINGER = 1000;
 
 /**
- * A slim scrollbar that floats over `viewport`'s right edge and only shows
- * while it scrolls, like macOS's overlay scrollbars, whatever the system's
- * scrollbar setting. Hide the viewport's own scrollbar, and render this next
- * to it inside a `relative` wrapper that clips it. Hovering the thumb brings
- * it back, and it can be dragged.
+ * The site's scrollbar: slim, floating over the right edge, and only shown
+ * while scrolling, like macOS's overlay scrollbars, whatever the system's
+ * scrollbar setting (native scrollbars are hidden site-wide in globals.css).
+ * Hovering the thumb brings it back, and it can be dragged.
+ *
+ * For a scrolling box, pass it as `viewport` and render this next to it inside
+ * a `relative` wrapper that clips it. Without `viewport` it's the page's own
+ * scrollbar, pinned to the window's right edge (see the root layout).
  */
-export function OverlayScrollbar({ viewport }: { viewport: RefObject<HTMLElement | null> }) {
+export function OverlayScrollbar({ viewport }: { viewport?: RefObject<HTMLElement | null> }) {
   const thumbRef = useRef<HTMLDivElement>(null);
+  const page = !viewport;
 
   useEffect(() => {
-    const el = viewport.current;
+    const el = viewport ? viewport.current : document.documentElement;
     const thumb = thumbRef.current;
     if (!el || !thumb) return;
+    // The page reports its scrolling on the window, a box on itself.
+    const scroller: HTMLElement | Window = viewport ? el : window;
 
     let thumbHeight = 0;
     let hovering = false;
@@ -77,12 +83,13 @@ export function OverlayScrollbar({ viewport }: { viewport: RefObject<HTMLElement
     };
 
     update();
-    // The list or its contents can change size (collapsing, a custom painting
-    // appearing, the phone list opening), which changes the thumb.
+    // The area or its contents can change size (collapsing, a custom painting
+    // appearing, the phone list opening, the window resizing), which changes
+    // the thumb.
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    for (const child of el.children) ro.observe(child);
-    el.addEventListener("scroll", onScroll, { passive: true });
+    for (const child of viewport ? el.children : [document.body]) ro.observe(child);
+    scroller.addEventListener("scroll", onScroll, { passive: true });
     thumb.addEventListener("pointerenter", onEnter);
     thumb.addEventListener("pointerleave", onLeave);
     thumb.addEventListener("pointerdown", onDown);
@@ -92,7 +99,7 @@ export function OverlayScrollbar({ viewport }: { viewport: RefObject<HTMLElement
     return () => {
       clearTimeout(hideTimer);
       ro.disconnect();
-      el.removeEventListener("scroll", onScroll);
+      scroller.removeEventListener("scroll", onScroll);
       thumb.removeEventListener("pointerenter", onEnter);
       thumb.removeEventListener("pointerleave", onLeave);
       thumb.removeEventListener("pointerdown", onDown);
@@ -107,7 +114,7 @@ export function OverlayScrollbar({ viewport }: { viewport: RefObject<HTMLElement
       ref={thumbRef}
       aria-hidden
       data-visible="false"
-      className="absolute right-0.5 top-0 w-1.5 touch-none rounded-full bg-zinc-500/60 opacity-0 transition-[opacity,width,background-color] duration-300 hover:w-2 hover:bg-zinc-400/80 data-[visible=true]:opacity-100"
+      className={`${page ? "fixed z-40" : "absolute"} right-0.5 top-0 w-1.5 touch-none rounded-full bg-zinc-500/60 opacity-0 transition-[opacity,width,background-color] duration-300 hover:w-2 hover:bg-zinc-400/80 data-[visible=true]:opacity-100`}
     />
   );
 }
