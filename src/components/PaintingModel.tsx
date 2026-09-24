@@ -50,10 +50,11 @@ type SpinControls = {
 };
 
 /**
- * Spins the model while the enclosing `.group` is hovered. When the pointer
- * leaves, it eases back to face-forward the short way round before the flat
- * image takes over again. Runs in JS because CSS can't read where an endless
- * animation is to finish it smoothly.
+ * Spins the model while the enclosing `.group` is hovered by a mouse or pen
+ * (not a finger; see onEnter). When the pointer leaves, it eases back to
+ * face-forward the short way round before the flat image takes over again.
+ * Runs in JS because CSS can't read where an endless animation is to finish
+ * it smoothly.
  */
 function useSpin(sceneRef: RefObject<HTMLDivElement | null>, enabled: boolean) {
   const controls = useRef<SpinControls | null>(null);
@@ -81,7 +82,11 @@ function useSpin(sceneRef: RefObject<HTMLDivElement | null>, enabled: boolean) {
       return angle;
     };
 
-    const onEnter = () => {
+    const onEnter = (e: PointerEvent) => {
+      // Not for touch: a finger "enters" as it taps, and on iOS a tap that
+      // swaps what's shown (the flat image for the box) only counts as a
+      // hover, so the link took a second tap to open.
+      if (e.pointerType === "touch") return;
       startAngle = currentAngle();
       settle?.cancel();
       settle = null;
