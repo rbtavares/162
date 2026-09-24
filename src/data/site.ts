@@ -12,3 +12,10 @@ export const SITE_TAGLINE = "Every pixel of every Minecraft painting, laid out t
 
 export const SITE_DESCRIPTION =
   "Every pixel of every Minecraft painting, laid out to study, simplify and paint, or turn a picture of your own into one.";
+
+/** Who made the site, linked from the gallery footer. */
+export const AUTHOR_NAME = "rbtavares";
+export const AUTHOR_URL = "https://github.com/rbtavares";
+
+/** The site's source code. */
+export const REPO_URL = "https://github.com/rbtavares/minecraft-painting-guide";

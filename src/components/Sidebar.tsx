@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CUSTOM_ID } from "@/data/paintings";
 import { SITE_NAME } from "@/data/site";
+import { Credits } from "@/components/Credits";
 import { OverlayScrollbar } from "@/components/OverlayScrollbar";
 import { PaintingPicker } from "@/components/PaintingPicker";
 import { usePreference } from "@/lib/preferences";
@@ -150,6 +151,16 @@ export function Sidebar() {
           <OverlayScrollbar viewport={listRef} />
         </div>
       </div>
+      {/* Desktop only, and not in the thumbnail strip, which is too narrow.
+          Kept to one line: while the sidebar narrows it's cut off like the
+          painting names rather than rewrapping. */}
+      <footer
+        className={`hidden shrink-0 overflow-hidden whitespace-nowrap border-t border-zinc-800 px-2 py-2 text-xs leading-4 text-zinc-500 ${
+          compact ? "" : "md:block"
+        }`}
+      >
+        <Credits />
+      </footer>
     </aside>
   );
 }
