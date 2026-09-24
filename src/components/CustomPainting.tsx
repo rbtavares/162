@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { PIXELS_PER_BLOCK } from "@/data/paintings";
+import { CUSTOM_PLACEHOLDER, PIXELS_PER_BLOCK } from "@/data/paintings";
 import {
   CUSTOM_MAX_BLOCKS,
   DEFAULT_CROP,
@@ -277,27 +277,46 @@ function UploadScreen({
           e.preventDefault();
           setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragLeave={(e) => {
+          // Also fired moving onto the box's own contents; only leaving counts.
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
           onFile(e.dataTransfer.files[0]);
         }}
-        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-14 text-center transition-colors focus-within:border-accent-400 ${
-          dragging
-            ? "border-accent-400 bg-accent-500/10"
-            : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50"
+        className={`group flex w-full max-w-lg cursor-pointer flex-col items-center rounded-xl border px-6 pt-12 pb-8 text-center transition-colors focus-within:border-accent-400 ${
+          dragging ? "border-accent-400 bg-accent-500/5" : "border-zinc-800 hover:border-zinc-700"
         }`}
       >
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Make a custom painting</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Drop a picture here. You pick the size in blocks, at 16 pixels per block.
-          </p>
-        </div>
-        <span className="rounded-md bg-accent-500 px-4 py-2 text-sm font-medium text-zinc-950">
-          {busy ? "Loading…" : "Choose a picture"}
+        {/* The gallery card's placeholder painting, pixel for pixel. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={CUSTOM_PLACEHOLDER.src}
+          alt=""
+          width={96}
+          height={96}
+          draggable={false}
+          className={`size-24 [image-rendering:pixelated] drop-shadow-[0_8px_16px_rgb(0_0_0/0.6)] transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            dragging ? "-translate-y-1 scale-110" : "group-hover:-translate-y-0.5"
+          }`}
+        />
+
+        <h1 className="mt-8 text-lg font-semibold tracking-tight">Make a custom painting</h1>
+        <p className="mt-1 max-w-xs text-sm text-zinc-500">
+          Turn a picture of your own into a Minecraft painting, then pick its size and frame.
+        </p>
+
+        <span
+          className={`mt-6 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            dragging ? "bg-white text-zinc-950" : "bg-zinc-100 text-zinc-950 group-hover:bg-white"
+          }`}
+        >
+          {busy ? "Loading…" : dragging ? "Drop to use it" : "Choose a picture"}
         </span>
+        <p className="mt-2 text-xs text-zinc-500">or drop one here</p>
+
         <input
           type="file"
           accept="image/*"
@@ -309,10 +328,15 @@ function UploadScreen({
           }}
         />
         {error && (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="mt-4 text-sm text-red-400">
             {error}
           </p>
         )}
+
+        <p className="mt-8 text-xs text-zinc-600">
+          Up to {CUSTOM_MAX_BLOCKS}×{CUSTOM_MAX_BLOCKS} blocks · {PIXELS_PER_BLOCK} pixels per block ·
+          Kept in your browser
+        </p>
       </label>
     </main>
   );
