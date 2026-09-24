@@ -797,24 +797,31 @@ export function PaintingCanvas({
           Reset
         </button>
       </div>
-      <div className="flight-enter-bottom pointer-events-none absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-2 [&>*]:pointer-events-auto">
+      {/* Desktop: a row along the bottom, the controls at the left and the
+          switches at the right. Phones: covers the whole view so the switches
+          can stack in its top left corner, with the controls centered along
+          the bottom. */}
+      <div className="flight-enter-bottom pointer-events-none absolute inset-3 flex flex-wrap items-end justify-center gap-2 md:top-auto md:justify-between [&>*]:pointer-events-auto">
         {controls && (
           <div className="max-w-full rounded-md border border-zinc-800 bg-zinc-900/90 px-3 py-2 shadow-lg backdrop-blur">
             {controls}
           </div>
         )}
-        <div className="ml-auto flex items-center gap-px overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur">
+        <div className="absolute left-0 top-0 flex flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/90 shadow-lg backdrop-blur md:static md:ml-auto md:flex-row md:items-center md:gap-px">
           <Switch label="Grid" title="Pixel grid" checked={showGrid} onChange={setShowGrid} />
           <Switch label="Numbers" title="Pixel numbers" checked={showNumbers} onChange={setShowNumbers} />
           {/* A single-block painting has no block edges to show: the switch
-              slides away (its column shrinks to nothing) and back. */}
+              slides away (its column shrinks to nothing, or its row when
+              they're stacked on phones) and back. */}
           <div
             inert={!blocksSwitchShown}
-            className={`grid transition-[grid-template-columns,opacity] duration-300 ease-out motion-reduce:transition-none ${
-              blocksSwitchShown ? "grid-cols-[1fr] opacity-100" : "grid-cols-[0fr] opacity-0"
+            className={`grid transition-[grid-template-columns,grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+              blocksSwitchShown
+                ? "grid-cols-[1fr] grid-rows-[1fr] opacity-100"
+                : "grid-cols-[1fr] grid-rows-[0fr] opacity-0 md:grid-cols-[0fr] md:grid-rows-[1fr]"
             }`}
           >
-            <div className="min-w-0 overflow-hidden">
+            <div className="min-h-0 min-w-0 overflow-hidden">
               <Switch label="Blocks" title="Block edges" checked={showBlocks} onChange={setShowBlocks} />
             </div>
           </div>
@@ -875,7 +882,7 @@ function ControlsHint() {
   const mod = useModifierKey();
   const key = "rounded-sm border border-zinc-700 bg-zinc-800 px-1 py-px font-sans text-[10px] text-zinc-300";
   return (
-    <p className="flight-enter-top pointer-events-none absolute left-3 top-3 hidden items-center gap-3 rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur pointer-fine:flex">
+    <p className="flight-enter-top pointer-events-none absolute left-3 top-3 hidden items-center gap-3 rounded-md bg-zinc-900/80 px-2.5 py-1.5 text-xs text-zinc-500 backdrop-blur md:pointer-fine:flex">
       <span className="flex items-center gap-1.5">
         <kbd className={key}>Click</kbd> highlight a color
       </span>
