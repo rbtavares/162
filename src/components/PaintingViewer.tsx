@@ -48,7 +48,11 @@ export function PaintingViewer({ painting, headerRight }: Props) {
         </header>
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="min-h-[60vh] flex-1 md:min-h-0">
+          {/* Phones: a set height, since the page scrolls rather than fitting
+              the screen, and the canvas fills its box by percentage, which
+              needs one (a min-height alone left it 0 px tall). svh so it
+              doesn't resize as the browser's toolbars come and go. */}
+          <div className="h-[60svh] md:h-auto md:min-h-0 md:flex-1">
             <PaintingCanvas
               painting={painting}
               colors={colors}
