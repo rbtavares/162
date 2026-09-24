@@ -129,7 +129,8 @@ export function CustomPainting() {
               {error}
             </p>
           )}
-          <p className="tabular-nums">
+          {/* Phones show the size under the title instead. */}
+          <p className="hidden tabular-nums md:block">
             {custom.width}×{custom.height} blocks
             <span className="hidden xl:inline">
               {" "}

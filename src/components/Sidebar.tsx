@@ -2,30 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CUSTOM_ID } from "@/data/paintings";
 import { SITE_NAME } from "@/data/site";
 import { Credits } from "@/components/Credits";
 import { OverlayScrollbar } from "@/components/OverlayScrollbar";
 import { PaintingPicker } from "@/components/PaintingPicker";
+import { TitleSlot } from "@/components/TitleSlot";
 import { usePreference } from "@/lib/preferences";
 import { prefersReducedMotion } from "@/lib/paintingFlight";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 
 /** How long the sidebar takes to widen or narrow (matches duration-300 below). */
 const SLIDE_MS = 300;
-
-/** Matches Tailwind's `md` breakpoint, where the sidebar moves to the side. */
-const DESKTOP = "(min-width: 48rem)";
-
-function subscribeDesktop(onChange: () => void) {
-  const query = matchMedia(DESKTOP);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-function useIsDesktop() {
-  return useSyncExternalStore(subscribeDesktop, () => matchMedia(DESKTOP).matches, () => true);
-}
 
 /** The painting the current page shows, from the URL. */
 function useSelectedId() {
@@ -101,6 +90,8 @@ export function Sidebar() {
             {SITE_NAME}
           </Link>
         </h1>
+        {/* Phones: the painting's title, beside the name (empty until then). */}
+        <TitleSlot className="flex min-w-0 flex-1 items-center gap-3 self-stretch border-l border-zinc-800 pl-3 empty:hidden md:hidden" />
         <button
           type="button"
           onClick={toggle}

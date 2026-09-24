@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/Sidebar";
+import { TitleSlotProvider } from "@/components/TitleSlot";
 
 /**
  * Shared by the painting pages and the custom painting: the sidebar lives
@@ -10,8 +11,10 @@ export default function ViewerLayout({ children }: LayoutProps<"/">) {
     // Clipped sideways: panels sliding in from past the edge (see globals.css)
     // must not add scrollbars, which would shift the painting as they vanish.
     <div className="page-width flex min-h-dvh flex-col overflow-x-clip md:h-dvh md:flex-row">
-      <Sidebar />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      <TitleSlotProvider>
+        <Sidebar />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      </TitleSlotProvider>
     </div>
   );
 }
