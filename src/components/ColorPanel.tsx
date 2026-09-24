@@ -115,11 +115,12 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
           )}
         </div>
       </div>
-      {/* Scrolls with the site's overlay scrollbar (see OverlayScrollbar). */}
-      <div className="relative flex min-h-0 max-h-72 flex-col overflow-hidden md:max-h-none md:flex-1">
+      {/* Scrolls with the site's overlay scrollbar (see OverlayScrollbar).
+          Phones: no scrolling of its own; it runs its full length down the page. */}
+      <div className="relative flex flex-1 flex-col md:min-h-0 md:overflow-hidden">
         <div
           ref={listRef}
-          className="min-h-0 flex-1 overflow-y-auto md:overscroll-contain"
+          className="flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain"
         >
           {/* Just the colors, as squares; the selected one's details show above. */}
           <ul className="grid grid-cols-3 gap-2 p-2">
@@ -137,7 +138,7 @@ export function ColorPanel({ palette, focusColor, onFocusChange }: Props) {
                     aria-label={details}
                     title={details}
                     style={{ backgroundColor: hex(c.key) }}
-                    className={`block aspect-square w-full rounded-sm shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 ${
+                    className={`block aspect-[2/1] w-full rounded-sm md:aspect-square shadow-[inset_0_0_0_1px_rgba(255,255,255,0.15)] transition-opacity focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 ${
                       active ? "ring-2 ring-accent-400 ring-offset-2 ring-offset-background" : ""
                     } ${focusColor !== null && !active ? "opacity-40 hover:opacity-100" : ""}`}
                   />

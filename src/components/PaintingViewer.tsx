@@ -55,7 +55,10 @@ export function PaintingViewer({ painting, headerRight }: Props) {
     // The colors panel runs the full height beside the painting, header and
     // all; the painting's header only spans the painting.
     <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Phones: only as tall as its content; when the page is shorter than
+          the screen, the colors below take the rest rather than leaving a gap
+          under the painting. */}
+      <div className="flex min-h-0 min-w-0 flex-col md:flex-1">
         {mobileTitle}
         <header
           className={`flight-enter-top h-16 ${mobileTitle ? "hidden" : "flex"} shrink-0 items-center justify-between gap-4 border-b border-zinc-800 px-6`}
@@ -74,7 +77,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
           ))}
         </header>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main className="flex min-h-0 min-w-0 flex-col md:flex-1">
           {/* Phones: a set height, since the page scrolls rather than fitting
               the screen, and the canvas fills its box by percentage, which
               needs one (a min-height alone left it 0 px tall). svh so it
@@ -104,7 +107,7 @@ export function PaintingViewer({ painting, headerRight }: Props) {
         </main>
       </div>
 
-      <aside className="flight-enter-right flex shrink-0 flex-col border-t border-zinc-800 md:w-56 md:border-l md:border-t-0">
+      <aside className="flight-enter-right flex flex-1 shrink-0 flex-col md:flex-none border-t border-zinc-800 md:w-56 md:border-l md:border-t-0">
         <ColorPanel palette={palette} focusColor={focusColor} onFocusChange={setFocus} />
       </aside>
     </div>
