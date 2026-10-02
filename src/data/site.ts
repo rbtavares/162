@@ -1,3 +1,6 @@
+/** Where the site is published, for absolute links in social previews. */
+export const SITE_URL = "https://162.rbtavares.com";
+
 /** The site's name, after the 16×16 pixels in every block. */
 export const SITE_NAME = "16²";
 
